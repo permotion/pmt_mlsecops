@@ -36,24 +36,24 @@ theme:
 nav:
   - Inicio: index.md
   - Contexto y Motivación:
-    - Contexto: docs/contexto.md
-    - Objetivos: docs/objetivos.md
+    - Contexto: contexto.md
+    - Objetivos: objetivos.md
   - Dataset:
-    - CSIC 2010: docs/dataset.md
-  - Stack Tecnológico: docs/stack.md
+    - CSIC 2010: dataset.md
+  - Stack Tecnológico: stack.md
   - Arquitectura:
-    - Visión general del pipeline: docs/arquitectura.md
-    - Stage 0 — Curado del dataset: docs/stage_0_curacion.md
-    - Stage 1-10 — Flujo completo: docs/flujo_completo.md
+    - Visión general del pipeline: arquitectura.md
+    - Stage 0 — Curado del dataset: stage_0_curacion.md
+    - Stage 1-10 — Flujo completo: flujo_completo.md
   - Conceptos Clave:
-    - MLOps y gobernanza: docs/conceptos_mlops.md
-    - Blue Team y Red Team: docs/conceptos_equipos.md
-    - Threshold calibration: docs/conceptos_threshold.md
+    - MLOps y gobernanza: conceptos_mlops.md
+    - Blue Team y Red Team: conceptos_equipos.md
+    - Threshold calibration: conceptos_threshold.md
   - Roles y Responsabilidades:
-    - Matriz RACI: docs/raci.md
-    - Blue Team Guide: docs/blue_team.md
-    - Red Team Guide: docs/red_team.md
-  - Glosario: docs/glosario.md
+    - Matriz RACI: raci.md
+    - Blue Team Guide: blue_team.md
+    - Red Team Guide: red_team.md
+  - Glosario: glosario.md
 
 markdown_extensions:
   - admonition
