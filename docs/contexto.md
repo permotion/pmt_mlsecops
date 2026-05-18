@@ -58,7 +58,7 @@ El dataset CSIC 2010 (HTTP dataset) fue publicado por la Universidad de Granada 
 
 | Enfoque | Ventaja | Limitación |
 |---------|---------|------------|
-| **Reglas manuales (WAF)** | Rápido de implementar | Se vuelve obsoleto rápido,容易被 bypass |
+| **Reglas manuales (WAF)** | Rápido de implementar | Se vuelve obsoleto rápido, fácilmente evadible con bypass |
 | **ML (nuestro enfoque)** | Se adapta a patrones, detecta variantes | Requiere proceso MLOps, necesita datos de training |
 | **Firma estática** | Muy preciso para ataques conocidos | No detecta ataques nuevos (0-day) |
 
