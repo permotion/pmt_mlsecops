@@ -20,7 +20,7 @@
 ## Revisión de modelo en Staging
 
 1. Abrir MLflow UI: http://localhost:5081
-2. Ir a **Models** → seleccionar `mlsec-model-a`
+2. Ir a **Models** → seleccionar `model-csic`
 3. Filtrar por **Stage: Staging**
 4. Revisar métricas: test_recall, test_precision, gap_recall, threshold
 

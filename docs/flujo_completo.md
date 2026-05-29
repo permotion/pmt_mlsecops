@@ -1,108 +1,93 @@
-# Flujo Completo del Pipeline
+# Flujo Completo del Pipeline (MLSecOps)
+
+Este documento detalla el ciclo de vida definitivo de 8 pasos para la ingesta, entrenamiento, validación y pase a producción de modelos de detección de ataques HTTP.
 
 ---
 
-## Stage 0 — Curado del Dataset
+## Step 1 — Ingesta y Curado (`dag_curate_dataset`)
 
-| Campo | Detalle |
-|-------|---------|
-| Objetivo | Dataset seguro y de calidad |
-| Responsable | MLOps |
-| Input | `data/raw/csic2010/csic_database.csv` |
-| Output | `data/curated/csic2010/csic_database_curated.csv` |
+**Función:** Descargar, verificar integridad y limpiar el dataset raw inicial.
+**Equipo Responsable:** MLOps / Data Engineering
+**Inputs:** Fuentes de datos externas (CSIC 2010).
+**Outputs/Entregables:** `curation_report.md` y datos limpios en `data/raw/`.
 
 ---
 
-## Stage 1 — Trigger Training
+## Step 2 — Exploración (`csic2010_eda.ipynb`)
 
-| Campo | Detalle |
-|-------|---------|
-| Objetivo | Iniciar el pipeline |
-| Responsable | MLOps + Airflow |
-| Input | Dataset curado |
-| Output | DAG ejecutado |
+**Función:** Análisis exploratorio de los datos (EDA) para entender la morfología de las peticiones HTTP (longitudes, distribuciones, caracteres extraños).
+**Equipo Responsable:** Data Science / Blue Team
+**Inputs:** Dataset raw curado.
+**Outputs/Entregables:** Notebook documentado con hallazgos para diseñar las features del siguiente paso.
 
 ---
 
-## Stage 2 — Preprocess
+## Step 3 — Preprocesamiento (`dag_preprocess`)
 
-| Campo | Detalle |
-|-------|---------|
-| Objetivo | Generar features estructuradas |
-| Script | `preprocess_csic_v4.py` |
-| Output | `features_v4.parquet` (24 features) |
-
----
-
-## Stage 3 — Train
-
-| Campo | Detalle |
-|-------|---------|
-| Objetivo | Entrenar LightGBM con threshold calibrado |
-| Script | `train_model_a_pipeline.py` |
-| Split | 70/15/15 |
-| Threshold | 0.3002 |
-| Métricas | Recall≥0.95, Precision≥0.75, Gap≤0.05 |
+**Función:** Transformación de texto libre (HTTP requests) a un espacio vectorial numérico. Extracción estructurada de características.
+**Equipo Responsable:** MLOps
+**Inputs:** Dataset limpio.
+**Outputs/Entregables:** `features_v5.parquet` (matriz de 27 features de alta densidad).
 
 ---
 
-## Stage 4 — Register
+## Step 4 — Prototipado (`experiments.ipynb`)
 
-| Campo | Detalle |
-|-------|---------|
-| Objetivo | Registrar en MLflow como candidato |
-| Condición | Solo si pasa criterios |
-| Output | alias=staging, tag=candidate |
-
----
-
-## Stage 5 — MLflow Registry
-
-Modelo disponible para revisión del Blue Team.
+**Función:** Entrenamiento manual y búsqueda de hiperparámetros de distintos algoritmos (Logistic Regression, Random Forest, LightGBM, XGBoost) para determinar cuál resuelve mejor el problema.
+**Equipo Responsable:** Data Science
+**Inputs:** `features_v5.parquet`
+**Outputs/Entregables:** Experimentos guardados en MLflow con `skip_promote=True` (sin afectar entornos superiores).
 
 ---
 
-## Stage 6 — Blue Team: Evaluación
+## Step 5 — Entrenamiento Automatizado (`dag_train`)
 
-| Campo | Detalle |
-|-------|---------|
-| Objetivo | Validar si el candidato es apropiado para producción |
-| Responsable | **Blue Team** |
-| Factores | Métricas training, FP rate, threshold, costo operativo |
-
----
-
-## Stage 7 — Promoción
-
-- **Aprobado**: `promote_model_to_production.py` → alias=production
-- **Rechazado**: se mantiene Production actual
+**Función:** Entrenamiento oficial y recurrente del modelo ganador (XGBoost) utilizando los parámetros descubiertos en el Step 4. Registro en la base de datos de MLflow.
+**Equipo Responsable:** MLOps
+**Inputs:** `features_v5.parquet` y código de entrenamiento (`train_model_a.py`).
+**Outputs/Entregables:** 
+- Binario del modelo registrado en MLflow Model Registry.
+- Tag en MLflow: `deployment_stage = candidate`.
 
 ---
 
-## Stage 8 — API Serving
+## Step 6 — Promoción a Staging (`dag_promote_model`)
 
-| Campo | Detalle |
-|-------|---------|
-| Endpoint | `POST /predict` |
-| Threshold | 0.3002 |
-| Latencia target | p95 < 500ms |
-
----
-
-## Stage 9 — Monitoreo
-
-| Métrica | Target | Alerta si |
-|---------|--------|-----------|
-| FP rate | < 20% | > 20% |
-| Recall | ≥ 0.93 | < 0.93 |
-| Latencia | < 500ms | > 750ms |
+**Función:** Búsqueda automática del mejor modelo "candidate" que cumpla los requisitos mínimos (ej. Recall >= 0.95). Asignación del alias `@staging` y notificación.
+**Equipo Responsable:** MLOps (Totalmente Automatizado)
+**Inputs:** Modelos registrados en MLflow.
+**Outputs/Entregables:** 
+- Alias en MLflow: `@staging` apuntando al mejor candidato.
+- Alerta enviada al Blue Team vía SNS/Email.
 
 ---
 
-## Stage 10 — Feedback Loop
+## Step 7 — Auditoría y Aprobación (Blue Team)
 
-| Campo | Detalle |
-|-------|---------|
-| Responsable | Red Team + Blue Team + MLOps |
-| DAG | `dag_red_team_agent` (cada 6h) |
-| Alert | Si detection_rate < 85% |
+**Función:** El Blue Team evalúa la API expuesta con el modelo `@staging`. Realizan pruebas DAST y evalúan Falsos Positivos. Si es seguro, aprueban la versión.
+**Equipo Responsable:** Blue Team
+**Inputs:** API de Inferencia (consumiendo `@staging`).
+**Outputs/Entregables:** 
+- Llamada a `POST /model/approve`
+- Tag en MLflow actualizado a `deployment_stage = approved`.
+
+---
+
+## Step 8 — Despliegue a Producción (`dag_deploy_prod`)
+
+**Función:** Verificación estricta de la firma digital del Blue Team (`approved`). Si está presente, transfiere el modelo al WAF real y alerta a los atacantes éticos.
+**Equipo Responsable:** MLOps
+**Inputs:** Modelo en `@staging` con tag `approved`.
+**Outputs/Entregables:** 
+- Alias en MLflow: `@production`.
+- Alerta (SNS) enviada al **Red Team** indicando que pueden comenzar las pruebas de evasión en producción.
+
+---
+
+## Diagrama de la Arquitectura de Transiciones
+
+```text
+  [Step 5]         [Step 6]          [Step 7]           [Step 8]
+ dag_train  --->  dag_promote  ---> Blue Team API ---> dag_deploy_prod
+(candidate)       (@staging)       (/approve tag)      (@production)
+```

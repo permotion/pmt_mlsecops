@@ -43,7 +43,10 @@ nav:
   - Stack Tecnológico: stack.md
   - Arquitectura:
     - Visión general del pipeline: arquitectura.md
-    - Stage 0 — Curado del dataset: stage_0_curacion.md
+    - Fases y Pipeline MLOps: arquitectura_fases.md
+    - Stage 1 — Curado del dataset: stage_1_curation.md
+    - Stage 2 — Preprocess: stage_2_preprocess.md
+    - Stage 3 — Train Model A: stage_3_train.md
     - Stage 1-10 — Flujo completo: flujo_completo.md
   - Conceptos Clave:
     - MLOps y gobernanza: conceptos_mlops.md
@@ -52,8 +55,13 @@ nav:
   - Roles y Responsabilidades:
     - Matriz RACI: raci.md
     - Blue Team Guide: blue_team.md
+    - Manual de Aprobación y Deploy: README_deploy.md
     - Red Team Guide: red_team.md
   - Glosario: glosario.md
+  - Resultados:
+    - Stage 1 — Curation: results/stage_1_results.md
+    - Stage 2 — EDA + Preprocess: results/stage_2_results.md
+    - Stage 3 — Train Model A: results/stage_3_results.md
 
 markdown_extensions:
   - admonition

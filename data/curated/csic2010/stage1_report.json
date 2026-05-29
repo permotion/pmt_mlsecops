@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-05-19T03:14:07.206114",
+  "input_path": "data/raw/csic2010/csic_database.csv",
+  "validation_passed": true,
+  "dataset_info": {
+    "total_rows": 61065,
+    "total_columns": 17,
+    "size_mb": 28.17,
+    "normal_count": 36000,
+    "attack_count": 25065,
+    "attack_rate": 41.05
+  },
+  "checks": {
+    "min_rows": {
+      "passed": true,
+      "expected": 1000,
+      "actual": 61065
+    },
+    "columns": {
+      "passed": true,
+      "expected": [
+        "Method",
+        "User-Agent",
+        "host",
+        "cookie",
+        "content",
+        "URL",
+        "classification"
+      ],
+      "missing": []
+    },
+    "balance": {
+      "passed": true
+    }
+  }
+}

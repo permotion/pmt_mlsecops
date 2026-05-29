@@ -12,7 +12,7 @@
 
 | # | Objetivo | Entregable | Stage |
 |---|----------|------------|-------|
-| 1 | Automatizar el ciclo de entrenamiento | DAG `dag_model_a`: `verify_data → preprocess → train → register → evaluate` | 1-4 |
+| 1 | Automatizar el ciclo de entrenamiento | Notebook `model_csic_experiments.ipynb` + DAG `dag_promote_model` | 3-6 |
 | 2 | Garantizar gobernanza de modelos | MLflow Registry con aliases (staging/production/archived) y tags (candidate/production) | 4-5 |
 | 3 | Integrar hombre en el loop (Blue Team) | Evaluación manual antes de producción con checklist de factores de decisión | 6 |
 | 4 | Cerrar el flujo con Red Team Agent | CrewAI que busca payloads frescos, testa contra API, genera FN reports | 10 |
@@ -62,7 +62,7 @@ Stage 0: Curado → PII removido, deduplicado, validation
 Stage 1-4: Airflow DAG (automático)
          │
          ▼
-Output: mlsec-model-a vN en Production
+Output: model-csic vN en Production
         - ROC-AUC: 0.9661
         - Recall: 0.9543 (≥ 0.95 ✅)
         - Precision: 0.7929 (≥ 0.75 ✅)
