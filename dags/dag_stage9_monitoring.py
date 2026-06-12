@@ -48,12 +48,14 @@ with DAG(
     check_logs = BashOperator(
         task_id='check_production_logs',
         bash_command=f'test -f {PRODUCTION_LOGS} || (echo "No hay logs de producción" && exit 1)',
+        cwd='/opt/airflow',
     )
 
     # 2. Ejecutar el script de Evidently AI
     run_monitoring = BashOperator(
         task_id='run_evidently_drift',
-        bash_command='cd /Users/permotion/Desktop/repositories/PERMOTION/PMT_MLSecOps && .venv/bin/python src/mlsec/blue_team/stage9_monitoring.py',
+        bash_command='python src/mlsec/blue_team/stage9_monitoring.py',
+        cwd='/opt/airflow',
     )
 
     # El flujo es lineal
