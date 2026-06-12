@@ -9,10 +9,12 @@ Infraestructura local con Docker Compose.
 | Servicio | Puerto | Descripción |
 |----------|--------|-------------|
 | **postgres** | 5432 | PostgreSQL 15 (metastore compartido) |
-| **mlflow** | 5081 | MLflow tracking server |
+| **mlflow** | 5081 | MLflow tracking server (incluye `--serve-artifacts`) |
+| **airflow-init** | — | Migración DB + usuario admin (one-shot) |
 | **airflow-webserver** | 5080 | Airflow UI (admin / admin) |
 | **airflow-scheduler** | — | Airflow scheduler |
-| **nginx-artifacts** | 5083 | Proxy HTTP para artefactos MLflow |
+
+Los artefactos de MLflow se almacenan en el volumen `mlflow-artifacts/` del repo y se sirven desde el propio servidor MLflow en el puerto **5081** (no hay servicio nginx separado).
 
 ---
 
@@ -38,9 +40,10 @@ docker compose ps
 
 ## URLs de acceso
 
-- **MLflow UI**: http://localhost:5081
+- **MLflow UI** (tracking + artefactos): http://localhost:5081
 - **Airflow UI**: http://localhost:5080 (admin / admin)
-- **Artefactos MLflow**: http://localhost:5083
+
+**Fuera de Docker:** la API FastAPI corre en el host en http://localhost:5082 (ver `src/mlsec/api/README.md`).
 
 ---
 
@@ -108,9 +111,11 @@ Verificar que el volumen `postgres-data` se creó correctamente:
 docker compose ls
 ```
 
-### MLflow no puede descargar artefactos
+### MLflow no puede leer o escribir artefactos
 
-El volumen `mlflow-artifacts` debe estar compartido entre mlflow y nginx-artifacts. Verificar con:
+Verificar que el volumen local está montado en el contenedor:
 ```bash
 docker compose exec mlflow ls /opt/mlflow/artifacts
 ```
+
+Los artefactos deben estar en `../mlflow-artifacts/` en el host. MLflow los sirve directamente en el puerto 5081 (`--serve-artifacts`).

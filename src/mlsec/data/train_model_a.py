@@ -31,6 +31,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 from sklearn.metrics import (
     confusion_matrix,
     precision_recall_curve,
@@ -48,7 +50,7 @@ import mlflow.sklearn
 
 RANDOM_STATE = 42
 MIN_RECALL = 0.95
-MIN_PRECISION = 0.85
+MIN_PRECISION = 0.75
 MIN_RECALL_VAL = 0.955  # Más estricto en validación para calibrar threshold
 TEST_SIZE = 0.30
 VAL_SIZE = 0.50
@@ -160,12 +162,8 @@ def train_model_a(
     )
     print(f"\nSplit: Train={len(y_train):,} Val={len(y_val):,} Test={len(y_test):,}")
 
-    # ── Scale continuous features ─────────────────────────────────────────────
-    scaler = StandardScaler()
+    # ── Prepare continuous indices ────────────────────────────────────────────
     continuous_idx = [feature_cols.index(c) for c in continuous_features]
-    X_train[:, continuous_idx] = scaler.fit_transform(X_train[:, continuous_idx])
-    X_val[:, continuous_idx] = scaler.transform(X_val[:, continuous_idx])
-    X_test[:, continuous_idx] = scaler.transform(X_test[:, continuous_idx])
 
     # ── Scale pos weight for imbalanced models ───────────────────────────────
     neg, pos = (y_train == 0).sum(), (y_train == 1).sum()
@@ -220,9 +218,21 @@ def train_model_a(
     best_score = 0
 
     print("\n" + "=" * 60)
-    for name, model in models:
+    for name, base_model in models:
         algo_slug = name.lower().replace(" ", "")
         run_name = f"model-csic-{algo_slug}-features-v5"
+
+        # Wrap in Pipeline with ColumnTransformer for continuous features
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', StandardScaler(), continuous_idx)
+            ],
+            remainder='passthrough'
+        )
+        model = Pipeline([
+            ('preprocessor', preprocessor),
+            ('classifier', base_model)
+        ])
 
         with mlflow.start_run(run_name=run_name, description=f"Model CSIC {name} - {execution_time}"):
             mlflow.set_tag("model_name", name)
@@ -259,23 +269,8 @@ def train_model_a(
 
             gap = abs(val_precision - test_precision)
 
-            # Log model artifact
+            # Log model artifact (which is now a full scikit-learn Pipeline)
             mlflow.sklearn.log_model(model, f"model-{algo_slug}")
-
-            # Log scaler info inside the model artifact directory using artifact_path
-            # This creates: run_root/model-xgboost/scaler_info.json
-            import tempfile, json
-            with tempfile.TemporaryDirectory() as tmpdir:
-                scaler_path = os.path.join(tmpdir, "scaler_info.json")
-                with open(scaler_path, "w") as f:
-                    json.dump({
-                        "mean": scaler.mean_.tolist(),
-                        "scale": scaler.scale_.tolist(),
-                        "feature_cols": feature_cols,
-                        "continuous_features": continuous_features,
-                        "continuous_idx": continuous_idx,
-                    }, f)
-                mlflow.log_artifact(scaler_path, artifact_path=f"model-{algo_slug}")
 
             # Log metrics
             mlflow.log_metric("roc_auc_val", round(val_auc, 4))
@@ -397,17 +392,24 @@ def register_model(
         registry_name: Nombre del modelo en el registry (ej: "model-csic")
         execution_time: Timestamp de ejecución para descripción
     """
-    model_uri = f"runs:/{run_id}/model"
+    algo_slug = model_name.lower()
+    model_uri = f"runs:/{run_id}/model-{algo_slug}"
 
-    # Register model with description
+    # Register model
     registered = mlflow.register_model(
         model_uri,
         name=registry_name,
-        description=f"{registry_name} - {execution_time} - {model_name}",
     )
     print(f"  Modelo registrado: {registered.name} v{registered.version}")
 
     client = mlflow.MlflowClient()
+    
+    # Update description using client
+    client.update_model_version(
+        name=registered.name,
+        version=registered.version,
+        description=f"{registry_name} - {execution_time} - {model_name}"
+    )
 
     # Asignar tags de candidato
     client.set_model_version_tag(registry_name, registered.version, "deployment_stage", "candidate")

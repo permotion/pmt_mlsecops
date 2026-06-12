@@ -1,8 +1,9 @@
 """
-Model Serving API — XGBoost v5 (CSIC 2010)
+Model Serving API — CSIC 2010 (features v5)
 
 Levanta el modelo desde MLflow Model Registry (alias=staging) y expone
-endpoints para predicción y health check.
+endpoints para predicción y health check. El algoritmo concreto (XGBoost,
+LightGBM, etc.) depende del run promovido en MLflow — ver GET /model/info.
 
 Descarga el artifact automáticamente via REST API de MLflow.
 
@@ -22,15 +23,15 @@ from contextlib import asynccontextmanager
 
 import mlflow
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sklearn.preprocessing import StandardScaler
 
 # Config
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5081")
 MODEL_NAME = os.environ.get("MLFLOW_MODEL_NAME", "model-csic")
-STAGE = "staging"
-PORT = 5082
+STAGE = os.environ.get("MLFLOW_MODEL_ALIAS", "staging")
+PORT = int(os.environ.get("UVICORN_PORT", "5082"))
 
 # MLflow setup
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -77,7 +78,7 @@ def load_model_info():
 # Global model instance and scaler
 _model = None
 _model_info = None
-_scaler_info = None
+
 
 
 @asynccontextmanager
@@ -113,22 +114,6 @@ async def lifespan(app: FastAPI):
         print(f"[model_serving] Modelo {_model_info['params']['model']} cargado exitosamente.")
 
 
-
-        # 3. Cargar scaler_info.json directamente desde MLflow
-        scaler_uri = f"{model_uri}/scaler_info.json"
-        print(f"[model_serving] Descargando scaler desde {scaler_uri}...")
-        try:
-            local_scaler_path = mlflow.artifacts.download_artifacts(scaler_uri)
-            with open(local_scaler_path, "r") as f:
-                scaler_data = json.load(f)
-            _scaler_info = StandardScaler()
-            _scaler_info.mean_ = np.array(scaler_data["mean"])
-            _scaler_info.scale_ = np.array(scaler_data["scale"])
-            _scaler_info.var_ = _scaler_info.scale_ ** 2
-            _scaler_info.continuous_idx = scaler_data["continuous_idx"]
-            print(f"[model_serving] Scaler cargado exitosamente.")
-        except Exception as e:
-            print(f"[model_serving] WARNING: No se pudo cargar el scaler. Error: {e}")
 
         print(f"[model_serving] Listo en puerto {PORT}")
 
@@ -345,10 +330,6 @@ def predict(request: PredictRequest):
 
         X = np.array([ordered_values], dtype=np.float32)
 
-        if _scaler_info:
-            continuous_idx = getattr(_scaler_info, "continuous_idx", [3, 7, 14])
-            X[:, continuous_idx] = _scaler_info.transform(X[:, continuous_idx])
-
     except HTTPException:
         raise
     except Exception as e:
@@ -357,12 +338,40 @@ def predict(request: PredictRequest):
     try:
         proba = _model.predict_proba(X)[0, 1]
         threshold = _model_info.get("metrics", {}).get("threshold", 0.5)
+        
+        # Fallback a 0.25 si en MLflow dice 0 (por bug del Stage 4)
         if threshold == 0:
+            print("[model_serving] WARNING: threshold=0 en run, usando default 0.2502")
             threshold = 0.2502
-            print(f"[model_serving] WARNING: threshold=0 en run, usando default 0.2502")
+            
         pred = 1 if proba >= threshold else 0
 
-        latency_ms = (time.time() - start) * 1000
+        # ---- STAGE 9: LOGGING PARA MONITOREO ----
+        import csv
+        import os
+        from datetime import datetime
+        try:
+            log_path = "data/processed/production_logs.csv"
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            file_exists = os.path.isfile(log_path)
+            with open(log_path, 'a', newline='') as f:
+                # Add timestamp and prediction to features
+                log_row = request.features.copy()
+                log_row['timestamp'] = datetime.now().isoformat()
+                log_row['prediction'] = pred
+                log_row['probability'] = proba
+                
+                fieldnames = ['timestamp', 'prediction', 'probability'] + FEATURE_COLS
+                writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerow(log_row)
+        except Exception as e:
+            print(f"[model_serving] Error guardando log para Stage 9: {e}")
+        # ----------------------------------------
+
+        end_time = time.time()
+        latency_ms = round((end_time - start_time) * 1000, 2)
 
         return PredictResponse(
             prediction=pred,
@@ -395,6 +404,55 @@ def predict_http(request: PredictHTTPRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al procesar request HTTP: {e}")
+
+
+@app.get("/predict/nginx")
+async def predict_nginx(request: Request):
+    """
+    Endpoint diseñado para funcionar con auth_request de NGINX.
+    Lee las cabeceras originales X-Original-URI y X-Original-Method,
+    extrae features al vuelo, predice, y devuelve 200 OK (permitido)
+    o 403 Forbidden (bloqueado por WAF).
+    """
+    try:
+        method = request.headers.get("x-original-method", "GET")
+        uri = request.headers.get("x-original-uri", "/")
+        
+        # --- REGLA DETERMINISTA (ALLOWLIST) ---
+        # Los WAF Híbridos no pasan rutas estáticas puras por el motor de ML.
+        # Esto evita Falsos Positivos OOD (Out-of-Distribution).
+        if method == "GET" and (uri == "/" or uri.startswith("/assets/") or uri.endswith((".css", ".js", ".png", ".ico", ".jpg"))):
+            return Response(status_code=200)
+            
+        # NGINX proxy pasa la URI original sin el host. 
+        # El dataset CSIC 2010 tenía URLs completas (ej: http://localhost:8080/tienda1/...)
+        # Si no agregamos esto, url_length queda muy corto y el modelo lo marca como anomalía.
+        url = "http://localhost:8080" + uri
+        
+        features = extract_features_from_http(
+            method=method,
+            url=url,
+            content_length=0,
+            content_type="",
+            body="",
+        )
+        predict_req = PredictRequest(features=features)
+        
+        # Internamente llamamos a predict() que devuelve un Pydantic Model
+        result = predict(predict_req)
+        
+        if result.prediction == 1:
+            # NGINX recibirá un 403 y bloqueará la petición original
+            raise HTTPException(status_code=403, detail="[AI WAF] Attack Detected")
+            
+        # NGINX recibirá un 200 y dejará pasar la petición original
+        return Response(status_code=200)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # En caso de error de parseo, por seguridad bloqueamos
+        raise HTTPException(status_code=403, detail=f"[AI WAF] Parse Error: {e}")
 
 
 if __name__ == "__main__":

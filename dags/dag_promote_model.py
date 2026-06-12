@@ -71,6 +71,7 @@ def find_best_candidate(**kwargs):
             "precision": precision,
             "roc_auc": run.data.metrics.get("roc_auc", 0),
             "threshold": run.data.metrics.get("threshold", 0),
+            "start_time": run.info.start_time,
         })
 
     if not candidates:
@@ -79,8 +80,8 @@ def find_best_candidate(**kwargs):
             f"y features_version={FEATURES_VERSION}"
         )
 
-    # Ordenar por Precision descendente
-    candidates.sort(key=lambda x: x["precision"], reverse=True)
+    # Ordenar por Precision descendente, y en caso de empate, por el más reciente
+    candidates.sort(key=lambda x: (x["precision"], x["start_time"]), reverse=True)
     best = candidates[0]
 
     print(f"\n=== MEJOR CANDIDATO ===")

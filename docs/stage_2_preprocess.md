@@ -1,14 +1,14 @@
-# Stage 2 — EDA + Preprocess CSIC 2010
+# Stage 2 — Preprocess CSIC 2010
 
 ---
 
 ## Objetivo
 
-**EDA (Exploratory Data Analysis):** Explorar el dataset en Jupyter Notebooks para entender su estructura, detectar problemas de calidad, decidir qué features construir, y definir las estrategias de preprocessing antes de escribir código de producción.
+Generar **features estructuradas (v5)** desde el CSV crudo del dataset CSIC 2010. El output alimenta Stage 3 (experimentos) y Stage 4 (entrenamiento automatizado).
 
-**Preprocess:** Generar features estructuradas (v4) desde el CSV crudo del dataset CSIC 2010. Estas features son usadas por Stage 3 para entrenar los modelos de detección de ataques.
+**Este stage NO entrena modelos** — solo transforma HTTP requests en una matriz numérica.
 
-**Este stage NO entrena modelos — solo explora y genera features.**
+**EDA previo:** [Stage 1 — Exploración de datos](stage_1_eda.md) (`notebooks/eda/csic2010_eda.ipynb`)
 
 ---
 
@@ -16,15 +16,10 @@
 
 ```
 Stage 2
-├── EDA (notebook)
-│   ├── Entender estructura del dataset
-│   ├── Identificar problemas de calidad
-│   ├── Descubrir patrones de ataque
-│   └── Definir estrategia de features
-│
 └── Preprocess (script + DAG)
-    ├── Generar 23 features desde CSV crudo
-    └── Output: features_v4.parquet
+    ├── Input:  csic_database.csv
+    ├── Script: preprocess_csic.py
+    └── Output: features_v5.parquet (27 features + label)
 ```
 
 ---
@@ -192,18 +187,18 @@ Documenta los descubrimientos del EDA:
 
 ### Objetivo
 
-Generar features estructuradas (v4) desde el CSV crudo. El output es un archivo Parquet con 25 features numéricas + label, listo para ser consumido por Stage 3.
+Generar features estructuradas (v5) desde el CSV crudo. El output es un archivo Parquet con 27 features numéricas + label, listo para Stages 3 y 4.
 
 ### Script: preprocess_csic.py
 
 **Ubicación:** `src/mlsec/data/preprocess_csic.py`
 
 **Input:** `data/raw/csic2010/csic_database.csv`
-**Output:** `data/processed/csic2010/features_v4.parquet`
+**Output:** `data/processed/csic2010/features_v5.parquet`
 
-### Features generadas (v4)
+### Features generadas (v5)
 
-Total: **23 features** + label
+Total: **27 features** + label (23 base + 4 ratio features de análisis FP)
 
 #### Método HTTP (3 features)
 
@@ -341,10 +336,16 @@ Se usan las 23 features sin evaluar si todas aportan señal o si hay redundancia
 | `src/mlsec/data/preprocess_csic.py` | Script de generación de features |
 | `dags/dag_preprocess.py` | DAG de Airflow |
 | `docs/stage_2_preprocess.md` | Esta documentación |
-| `data/processed/csic2010/features_v4.parquet` | Output del preprocess |
+| `data/processed/csic2010/features_v5.parquet` | Output del preprocess |
 
 ---
 
 ## Responsable
 
-**MLOps** — análisis exploratorio y generación de features para training
+**MLOps** — preprocess automatizado · **Data Science** — EDA en [Stage 1](stage_1_eda.md)
+
+---
+
+## Navegación
+
+← [Stage 1 — EDA](stage_1_eda.md) · [Stage 3 — Prototipado](stage_3_experiments.md) →

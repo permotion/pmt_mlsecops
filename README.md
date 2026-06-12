@@ -75,5 +75,5 @@ PMT_MLSecOps/
 - **Airflow** — orquestación de pipelines automatizados
 - **MLflow** — tracking de experimentos y model registry centralizado
 - **PostgreSQL** — metastore compartido
-- **XGBoost** — modelo principal de clasificación
+- **XGBoost** — modelo seleccionado en el run canónico v5 (4 algoritmos comparados por run)
 - **FastAPI** — API de inferencia (con endpoints para aprobación del Blue Team)

@@ -1,108 +1,225 @@
 # Ciclo de Vida MLOps y Separación de Responsabilidades
 
-En este proyecto, existe una división clara entre el entorno de **investigación** (donde los Data Scientists inventan la lógica), el entorno de **producción** (donde MLOps automatiza), y el perímetro de **seguridad** (donde el Blue Team y Red Team auditan y atacan).
+En este proyecto existe una división clara entre el entorno de **investigación** (donde los Data Scientists diseñan features y evalúan algoritmos), el entorno de **producción** (donde MLOps automatiza el pipeline), y el perímetro de **seguridad** (donde Blue Team y Red Team auditan y atacan).
 
-A continuación se detalla cómo fluyen los datos a través de los Notebooks y los DAGs de Airflow, respetando el principio fundamental de que "los modelos en producción no se entrenan a mano".
+Principio rector: **los modelos en producción no se entrenan a mano** — el notebook experimenta; el DAG entrena y registra.
 
-## Diagrama de Flujo de Datos y Promoción
+Ver también: [Visión general del pipeline](arquitectura.md) · [Stack Tecnológico](stack.md) · [Dataset CSIC 2010](dataset.md)
+
+---
+
+## Numeración Steps ↔ Stages
+
+| Step | Stage | Componente |
+|------|-------|------------|
+| 1 | 0 | `dag_curate_dataset` |
+| 2 | 1 | `csic2010_eda.ipynb` |
+| 3 | 2 | `dag_preprocess` |
+| 4 | 3 | `model_csic_experiments.ipynb` |
+| 5 | 4 | `dag_train` |
+| 6 | 5 | `dag_promote_model` |
+| 7 | 6 | Blue Team + FastAPI |
+| 8 | 7 | `dag_deploy_prod` |
+| — | 8–10 | API prod · Monitoreo · Red Team |
+
+---
+
+## Diagrama de flujo de datos y promoción
 
 ```text
-[Datos Externos / Logs HTTP]
+[data/raw/csic2010/csic_database.csv]
       │
       ▼
 +------------------------------------+
 | ⚙️ Step 1: dag_curate_dataset      | (MLOps)
 +------------------------------------+
       │
-      ├─► [Output] data/raw/csic2010.parquet
+      ├─► data/curated/csic2010/curation_report.md
+      │   (escaneo PII — el CSV raw no se modifica)
       │
       ▼
 +------------------------------------+
-| 📓 Step 2: csic2010_eda.ipynb      | (Data Science / Blue Team)
+| 📓 Step 2: csic2010_eda.ipynb      | (Data Science)
 +------------------------------------+
+      │
+      ├─► Hallazgos EDA (notebooks/eda/)
       │
       ▼
 +------------------------------------+
 | ⚙️ Step 3: dag_preprocess          | (MLOps)
 +------------------------------------+
       │
-      ├─► [Output] data/processed/features_v5.parquet
+      ├─► data/processed/csic2010/features_v5.parquet (27 features)
       │
       ▼
 +------------------------------------+
-| 📓 Step 4: experiments.ipynb       | (Data Science)
+| 📓 Step 4: model_csic_experiments  | (Data Science)
 +------------------------------------+
+      │
+      ├─► Runs MLflow (skip_promote=True)
       │
       ▼
 +------------------------------------+
 | ⚙️ Step 5: dag_train               | (MLOps)
 +------------------------------------+
       │
-      ├─► [Output] MLflow Model Registry [Tag: candidate]
+      ├─► 4 runs MLflow (LR, RF, XGBoost, LightGBM)
       │
       ▼
 +------------------------------------+
 | ⚙️ Step 6: dag_promote_model       | (MLOps)
 +------------------------------------+
       │
-      ├─► [Output] MLflow [Alias: @staging] + Alerta SNS
+      ├─► MLflow alias @staging + tag candidate
+      ├─► Alerta SNS → Blue Team
       │
       ▼
 +------------------------------------+
-| 🛡️ Step 7: Auditoría de Seguridad   | (Blue Team)
-|   Ataca API en puerto 5082         |
+| 🛡️ Step 7: Auditoría Blue Team     |
+|   FastAPI http://localhost:5082    |
 +------------------------------------+
       │
-      ├─► [Output] curl -X POST /model/approve -> [Tag: approved]
+      ├─► POST /model/approve → tag approved
       │
       ▼
 +------------------------------------+
 | ⚙️ Step 8: dag_deploy_prod         | (MLOps)
 +------------------------------------+
       │
-      └─► [Output] MLflow [Alias: @production] + Alerta Red Team
+      ├─► MLflow alias @production
+      ├─► Alerta SNS → Red Team
+      │
+      ▼
++------------------------------------+
+| 🚀 Stage 8: API en producción      | model_serving @production
++------------------------------------+
+      │
+      ├─► Stage 9: Monitoreo (FP rate, latencia)
+      └─► Stage 10: Red Team CrewAI → reports/ → feedback loop
 ```
 
 ---
 
-## Detalle Paso a Paso (Entradas y Salidas)
+## Detalle paso a paso (entradas y salidas)
 
-### Step 1: Curado de Datos (`dag_curate_dataset.py`)
-Es el punto de entrada al sistema. Se encarga de aislar la infraestructura interna de las fuentes de datos externas.
-- **Input:** Bases de datos externas o texto plano de logs.
-- **Output:** Archivo inmutable `data/raw/csic2010.parquet`.
+### Step 1 — Curado de datos (`dag_curate_dataset`)
 
-### Step 2: Exploración de Datos (`csic2010_eda.ipynb`)
-Es la primera fase humana. Los investigadores proponen reglas lógicas basándose en análisis visual.
-- **Input:** `data/raw/csic2010.parquet`.
-- **Output:** Hallazgos analíticos sobre morfología de ataques.
+Escanea el dataset en busca de PII y referencias a organizaciones. **No modifica ni ingesta datos** — solo genera un reporte para revisión humana.
 
-### Step 3: Procesamiento en Producción (`dag_preprocess.py`)
-Traduce los descubrimientos del Step 2 en una tubería robusta.
-- **Input:** `data/raw/csic2010.parquet`.
-- **Output:** `data/processed/features_v5.parquet` (Matriz numérica de 27 variables).
+- **Input:** `data/raw/csic2010/csic_database.csv` (descargado previamente, p. ej. desde Kaggle)
+- **Output:** `data/curated/csic2010/curation_report.md`
+- **Script:** `src/mlsec/data/curate_dataset.py`
+- **Detalle:** [Stage 0 — Curado del dataset](stage_0_curation.md)
 
-### Step 4: Prototipado del Modelo (`model_csic_experiments.ipynb`)
-Calibración de algoritmos (XGBoost).
-- **Input:** `data/processed/features_v5.parquet`.
-- **Output:** Parámetros óptimos. Los runs se guardan en MLflow (Tracing) pero sin promoverse.
+### Step 2 — Exploración de datos (`notebooks/eda/csic2010_eda.ipynb`)
 
-### Step 5: Automatización del Entrenamiento (`dag_train.py`)
-El código final se ejecuta automáticamente. No depende de humanos.
-- **Input:** `data/processed/features_v5.parquet`.
-- **Output:** Modelo guardado en MLflow bajo la etiqueta `deployment_stage = candidate`.
+Primera fase humana. Análisis de distribución de clases, métodos HTTP, patrones de ataque y diseño de features.
 
-### Step 6: Búsqueda y Staging (`dag_promote_model.py`)
-El DAG escanea los modelos candidatos, selecciona el de mayor precisión que supere el 0.95 de Recall.
-- **Input:** Modelos `candidate` en MLflow.
-- **Output:** Se le asigna el alias dinámico `@staging` y se envía alerta al Blue Team.
+- **Input:** `data/raw/csic2010/csic_database.csv`
+- **Output:** Decisiones documentadas en el notebook (columnas a descartar, indicadores de texto, estrategia de nulos)
 
-### Step 7: Aprobación del Blue Team (API)
-Fase humana de ciberseguridad. El equipo ataca la API que consume el modelo `@staging`.
-- **Input:** Endpoint `/predict/http`.
-- **Output:** Si es robusto, ejecutan `/model/approve` para inyectar el tag `approved`.
+### Step 3 — Preprocess (`dag_preprocess`)
 
-### Step 8: Despliegue a Producción (`dag_deploy_prod.py`)
-Última barrera. El DAG verifica que el modelo `@staging` tenga la firma `approved`.
-- **Input:** Modelo `@staging` firmado.
-- **Output:** Se le asigna el alias `@production`. Se envía alerta SNS al Red Team para iniciar DAST en el WAF real.
+Traduce los hallazgos del EDA en una tubería reproducible de feature engineering.
+
+- **Input:** `data/raw/csic2010/csic_database.csv`
+- **Output:** `data/processed/csic2010/features_v5.parquet` (27 features + label)
+- **Script:** `src/mlsec/data/preprocess_csic.py`
+- **Detalle:** [Stage 2 — Preprocess](stage_2_preprocess.md)
+
+### Step 4 — Prototipado (`notebooks/experiments/model_csic_experiments.ipynb`)
+
+Entrena 4 algoritmos (LogisticRegression, RandomForest, XGBoost, LightGBM) con `skip_promote=True` para experimentar sin afectar staging.
+
+- **Input:** `data/processed/csic2010/features_v5.parquet`
+- **Output:** Runs en MLflow experiment `model-csic` (sin promoción a Registry)
+- **Run canónico v5:** XGBoost — recall 0.9535, precision 0.7944
+
+### Step 5 — Entrenamiento automatizado (`dag_train`)
+
+Ejecuta la misma lógica de `train_model_a.py` de forma automatizada vía Airflow.
+
+- **Input:** `data/processed/csic2010/features_v5.parquet`
+- **Output:** 4 runs registrados en MLflow (uno por algoritmo)
+- **Nota:** el tag `candidate` **no** se asigna aquí — lo hace Step 6
+- **Detalle:** [Stage 4 — Train Model A](stage_4_train.md)
+
+### Step 6 — Promoción a staging (`dag_promote_model`)
+
+Consulta MLflow, filtra runs con `features_version=v5` y `recall >= 0.95`, selecciona el de **mayor precision** y lo promueve.
+
+- **Input:** Runs MLflow del experiment `model-csic`
+- **Output:**
+  - Alias `@staging` en Model Registry (`model-csic`)
+  - Tag `candidate`
+  - Alerta SNS al Blue Team (simulada en logs si no hay ARN configurado)
+- **Criterio:** `MIN_RECALL=0.95` → ordenar por precision descendente
+
+### Step 7 — Aprobación Blue Team (FastAPI)
+
+Fase humana de ciberseguridad. El equipo prueba la API que consume el modelo `@staging`.
+
+- **Servicio:** `uvicorn src.mlsec.api.model_serving:app --port 5082` (fuera de Docker)
+- **Input:** Endpoints `/predict`, `/predict/http`
+- **Output:** `POST /model/approve` → tag `approved`
+- **Guía:** [Blue Team Guide](blue_team.md)
+
+### Step 8 — Despliegue a producción (`dag_deploy_prod`)
+
+Verifica que el modelo en `@staging` tenga tag `approved` antes de promover.
+
+- **Input:** Modelo `@staging` con tag `approved`
+- **Output:**
+  - Alias `@production`
+  - Alerta SNS al Red Team (simulada en logs)
+- **Guía:** [Manual de Aprobación y Deploy](README_deploy.md)
+
+### Stage 8 — API en producción
+
+FastAPI recarga el modelo con alias `@production` desde MLflow Registry.
+Se encuentra protegida detrás de un WAF simulado (Nginx).
+- **Endpoint principal:** `POST /predict/http`
+- **Output Secundario:** Logs de peticiones estructuradas hacia `data/processed/production_logs.csv`
+- **Nota:** en el MVP la API corre simulando un WAF local que enriquece los logs para el monitoreo.
+
+### Stage 9 — Monitoreo (Data Drift)
+
+Blue Team supervisa la degradación matemática del modelo en producción usando **Evidently AI**.
+- **Orquestador:** `dag_stage9_monitoring`
+- **Input:** `features_v5.parquet` (Reference) vs `production_logs.csv` (Current)
+- **Output:** Reporte HTML interactivo (`reports/data_drift_report.html`)
+- **Trigger de re-training:** Drift severo en características clave que afecten el Recall o Precision.
+
+### Stage 10 — Red Team (Macro-GAN Semántica)
+
+Agentes LLM autónomos (CrewAI) ejecutan pruebas de evasión operando bajo una arquitectura **Macro-GAN Semántica**.
+- **Agente 1 (Payload Hunter):** Hace OSINT para generar el *Latent Space* (JSON de inyecciones base).
+- **Agente 2 (Attack Simulator):** Muta iterativamente los payloads que son bloqueados por el WAF hasta lograr un Bypass.
+- **Output:** `reports/red_team_report_*.md`
+- **Feedback Loop:** Si se encuentran Falsos Negativos, los payloads exitosos se inyectan en el Data Lake y se fuerza un re-entrenamiento (Stage 1).
+- **Guía:** [Red Team Guide](red_team.md)
+
+---
+
+## Arquitectura de servicios
+
+| Servicio | Puerto | Entorno | Descripción |
+|----------|--------|---------|-------------|
+| PostgreSQL | 5432 | Docker | Metastore compartido |
+| MLflow | 5081 | Docker | Tracking + Registry + artefactos |
+| Airflow | 5080 | Docker | 5 DAGs (ejecución manual) |
+| FastAPI | 5082 | Host local | Inferencia + `/model/approve` |
+
+Todos los DAGs usan `schedule=None` — se disparan manualmente desde la UI de Airflow.
+
+---
+
+## Separación investigación vs. producción
+
+| | Investigación (Notebooks) | Producción (DAGs) |
+|---|---|---|
+| **Steps** | 2, 4 | 1, 3, 5, 6, 8 |
+| **Quién** | Data Science | MLOps |
+| **Promueve a staging** | No (`skip_promote=True`) | Sí (`dag_promote_model`) |
+| **Modifica Registry** | Solo logging de runs | Aliases y tags de gobernanza |
+| **Cuándo cambia** | Cada experimento | Cuando MLOps ejecuta el DAG |

@@ -44,10 +44,21 @@ nav:
   - Arquitectura:
     - Visión general del pipeline: arquitectura.md
     - Fases y Pipeline MLOps: arquitectura_fases.md
-    - Stage 1 — Curado del dataset: stage_1_curation.md
-    - Stage 2 — Preprocess: stage_2_preprocess.md
-    - Stage 3 — Train Model A: stage_3_train.md
-    - Stage 1-10 — Flujo completo: flujo_completo.md
+    - Pipeline de datos:
+      - Stage 0 — Curado del dataset: stage_0_curation.md
+      - Stage 1 — Exploración (EDA): stage_1_eda.md
+      - Stage 2 — Preprocess: stage_2_preprocess.md
+      - Stage 3 — Prototipado: stage_3_experiments.md
+      - Stage 4 — Train Model A: stage_4_train.md
+    - Gobernanza y deploy:
+      - Stage 5 — Promote to staging: stage_5_promote.md
+      - Stage 6 — Auditoría Blue Team: stage_6_blue_team_audit.md
+      - Stage 7 — Deploy a producción: stage_7_deploy.md
+    - Operación:
+      - Stage 8 — API Serving: stage_8_api_serving.md
+      - Stage 9 — Monitoreo: stage_9_monitoreo.md
+      - Stage 10 — Red Team: stage_10_red_team.md
+    - Flujo completo (índice 0–10): flujo_completo.md
   - Conceptos Clave:
     - MLOps y gobernanza: conceptos_mlops.md
     - Blue Team y Red Team: conceptos_equipos.md

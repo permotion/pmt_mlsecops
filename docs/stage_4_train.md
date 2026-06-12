@@ -1,10 +1,10 @@
-# Stage 3 — Train Model A
+# Stage 4 — Train Model A
 
 ---
 
 ## Objetivo
 
-Entrenar 4 modelos de clasificación binaria (LogisticRegression, RandomForest, XGBoost, LightGBM) usando `features_v5.parquet` de Stage 2. El mejor modelo que pase los criterios de aceptación es registrado en MLflow Model Registry con alias `staging` para revisión del Blue Team.
+Entrenar 4 modelos de clasificación binaria (LogisticRegression, RandomForest, XGBoost, LightGBM) usando `features_v5.parquet` de Stage 2. Entre los que cumplen recall ≥ 0.95, se selecciona el de **mayor precision** para promoción a staging (run canónico v5: **XGBoost**, precision 0.7944).
 
 Este stage responde a la pregunta: **¿qué algoritmo funciona mejor para detectar ataques web con las features que tenemos?**
 
@@ -28,7 +28,7 @@ Este stage sigue el patrón **notebook para experimentación + script para produ
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  STAGE 3 — Train Model A                                           │
+│  STAGE 4 — Train Model A                                           │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  ┌──────────────────────────────┐    ┌────────────────────────────┐ │
@@ -403,7 +403,7 @@ Tags:
 
 Este stage no tiene su propio DAG. El entrenamiento se ejecuta desde el notebook `model_csic_experiments.ipynb` (experimentación) o desde el script `train_model_a.py` (producción).
 
-El DAG `dag_promote_model.py` (Stage 6) es el que consulta MLflow, selecciona el mejor candidato y lo promueve a alias=staging.
+El DAG `dag_promote_model.py` (Stage 5) es el que consulta MLflow, selecciona el mejor candidato y lo promueve a alias=staging.
 
 ```bash
 # Ejecutar notebook
@@ -503,8 +503,8 @@ No se documenta qué features contribuyen más al modelo.
 | `notebooks/experiments/model_csic_experiments.ipynb` | Notebook de experimentación — entrena 4 modelos y registra el mejor en Registry con alias=staging |
 | `src/mlsec/data/train_model_a.py` | Script de entrenamiento (función `train_model_a()`) — usado por el notebook |
 | `src/mlsec/data/promote_model_to_staging.py` | Script de promoción manual a alias=staging |
-| `dags/dag_promote_model.py` | DAG de Airflow — Stage 6: selección automática + alerta SNS |
-| `docs/stage_3_train.md` | Esta documentación |
+| `dags/dag_promote_model.py` | DAG de Airflow — Stage 5: selección automática + alerta SNS |
+| `docs/stage_4_train.md` | Esta documentación |
 
 ---
 
@@ -554,3 +554,9 @@ airflow dags trigger dag_promote_model
 ## Responsable
 
 **MLOps** — entrenamiento y registro de candidatos
+
+---
+
+## Navegación
+
+← [Stage 3 — Prototipado](stage_3_experiments.md) · [Stage 5 — Promote](stage_5_promote.md) →

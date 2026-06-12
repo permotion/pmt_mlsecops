@@ -1,4 +1,4 @@
-# Stage 1 — Curado del Dataset
+# Stage 0 — Curado del Dataset
 
 ---
 
@@ -270,10 +270,16 @@ La búsqueda de empresas ya es case-insensitive en el script, pero el reporte no
 |---------|-------------|
 | `dags/dag_curate_dataset.py` | DAG de Airflow |
 | `src/mlsec/data/curate_dataset.py` | Script de escaneo |
-| `docs/stage_1_curation.md` | Esta documentación |
+| `docs/stage_0_curation.md` | Esta documentación |
 
 ---
 
 ## Responsable
 
 **MLOps** — curación de datos y revisión de hallazgos del reporte
+
+---
+
+## Navegación
+
+[Stage 1 — EDA](stage_1_eda.md) →

@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMT MLSecOps | Pipeline Presentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #030712;
+    --surface: #111827;
+    --surface2: #1f2937;
+    --border: #374151;
+    --accent: #3b82f6;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --text: #f9fafb;
+    --text-muted: #9ca3af;
+    --gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+  }
+
+  /* ─── DECK ─── */
+  .deck { width: 100%; height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 60px 80px;
+    opacity: 0; pointer-events: none;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(20px) scale(0.98);
+  }
+  .slide.active {
+    opacity: 1; pointer-events: all; transform: translateY(0) scale(1);
+  }
+
+  /* ─── NAV ─── */
+  .nav {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 15px; align-items: center; z-index: 1000;
+    background: rgba(17,24,39,0.8); backdrop-filter: blur(20px);
+    padding: 12px 24px; border-radius: 999px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .nav button {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 10px 24px;
+    cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600;
+    transition: all 0.3s;
+  }
+  .nav button:hover { background: var(--accent); border-color: var(--accent); }
+  .dots { display: flex; gap: 8px; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border); transition: all 0.4s; cursor: pointer;
+  }
+  .dot.active { background: var(--accent); width: 32px; border-radius: 5px; }
+
+  /* ─── TYPOGRAPHY ─── */
+  .label {
+    font-size: 12px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+  }
+  h1 { font-size: 64px; font-weight: 900; line-height: 1; letter-spacing: -2px; }
+  h2 { font-size: 42px; font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+  h3 { font-size: 20px; font-weight: 700; color: var(--text); }
+  p { font-size: 18px; color: var(--text-muted); line-height: 1.6; }
+  .gradient-text { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  /* ─── COMPONENTS ─── */
+  .grid { display: grid; gap: 24px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 32px;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top:0; left:0; width: 100%; height: 4px;
+    background: transparent;
+  }
+  .card.blue::before { background: var(--accent); }
+  .card.green::before { background: var(--green); }
+  .card.orange::before { background: var(--orange); }
+  .card.red::before { background: var(--red); }
+
+  .stat-value { font-size: 48px; font-weight: 900; margin: 8px 0; }
+  .stat-label { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ─── DIAGRAMS ─── */
+  .diagram-container {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    margin-top: 20px; position: relative;
+  }
+  svg { max-width: 100%; max-height: 100%; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.4)); }
+  .node-label { font-size: 10px; font-weight: 700; font-family: 'Inter'; text-anchor: middle; fill: var(--text); }
+  .connector { stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4,4; opacity: 0.5; }
+  .hub-box { fill: var(--surface); stroke: var(--border); stroke-width: 2; }
+  
+  /* Animations */
+  @keyframes flow {
+    from { stroke-dashoffset: 20; }
+    to { stroke-dashoffset: 0; }
+  }
+  .active-flow {
+    animation: flow 1s linear infinite;
+    stroke-dasharray: 4, 4;
+    opacity: 0.8;
+  }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .pos { color: var(--green); font-weight: 700; }
+  .neg { color: var(--red); font-weight: 700; }
+
+</style>
+</head>
+<body>
+
+<div class="bg-glow" style="position:absolute; width:800px;height:800px;top:-200px;right:-100px;background:var(--accent); filter:blur(100px); opacity:0.15; border-radius:50%; z-index:-1;"></div>
+<div class="bg-glow" style="position:absolute; width:600px;height:600px;bottom:-200px;left:-100px;background:var(--accent2); filter:blur(100px); opacity:0.15; border-radius:50%; z-index:-1;"></div>
+
+<div class="deck">
+
+  <!-- SLIDE 1: HERO -->
+  <div class="slide active" id="s1">
+    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; margin-top: -40px;">
+      <div class="label">Hackacademy AI Powered Security</div>
+      <h1 style="font-size: 72px;"><span class="gradient-text">PMT MLSecOps</span><br>Gobernanza de Modelos</h1>
+      <p style="max-width: 800px; margin-top: 24px; font-size: 22px; line-height: 1.6;">
+        Sistema automatizado de detección de ataques web basado en <strong>Machine Learning</strong>.
+        Superando los notebooks aislados: integrando orquestación, validación humana (Blue Team) y pruebas continuas de evasión (Red Team).
+      </p>
+      <div style="margin-top: 60px; display: flex; align-items: center; gap: 20px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; color: var(--accent);">
+          DF
+        </div>
+        <div>
+          <div style="font-weight: 700; font-size: 20px;">Diego Furque</div>
+          <div style="color: var(--text-muted); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; margin-bottom: 8px;">June 2026</div>
+          <a href="https://github.com/permotion/pmt_mlsecops" target="_blank" style="color: var(--text-muted); text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            github.com/permotion/pmt_mlsecops
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: VISIÓN GENERAL -->
+  <div class="slide" id="s2">
+    <div class="label">Visión General</div>
+    <h2 style="font-size: 42px; margin-bottom: 16px;">Descripción del proyecto</h2>
+    <p style="font-size: 16px; max-width: 950px; margin-bottom: 24px;">
+      <strong>PMT MLSecOps</strong> es un sistema de detección de ataques web basado en Machine Learning con un pipeline MLOps automatizado. Clasifica peticiones HTTP como normales o maliciosas (SQL Injection, XSS, Path Traversal, etc.) usando el dataset académico CSIC 2010 (~61.000 requests, ~41% ataques).<br><br>
+      No es solo un modelo entrenado: implementa un ciclo de vida completo con gobernanza de modelos, roles de seguridad (Blue Team y Red Team) y feedback loop para re-entrenamiento. El objetivo es demostrar (a modo de ejercicio teórico/práctico) cómo operar ML en ciberseguridad con procesos, no solo con notebooks aislados.
+    </p>
+    
+    <div class="card" style="padding: 24px;">
+      <h3 style="margin-bottom: 16px; font-size: 20px;">Resumen del proyecto</h3>
+      <table style="font-size: 14px; line-height: 1.5;">
+        <tr><td style="width: 15%; color: var(--accent); font-weight: 700;">Problema</td><td>Detectar ataques HTTP a escala, con modelos que no se degraden en silencio.</td></tr>
+        <tr><td style="color: var(--accent); font-weight: 700;">Solución</td><td>Pipeline MLOps (Airflow + MLflow) + API FastAPI + agentes Red Team (CrewAI).</td></tr>
+        <tr><td style="color: var(--accent); font-weight: 700;">Dataset</td><td>CSIC 2010 — 27 features extraídas de requests HTTP.</td></tr>
+        <tr><td style="color: var(--accent); font-weight: 700;">Modelo</td><td>XGBoost (run v5 canónico: recall 0.9535, precision 0.7944). Se entrenan 4 algoritmos; gana el de mayor precision con recall ≥ 0.95.</td></tr>
+        <tr><td style="color: var(--accent); font-weight: 700;">Gobernanza</td><td>Aliases MLflow <code>@staging</code> → aprobación Blue Team → <code>@production</code>.</td></tr>
+        <tr><td style="color: var(--accent); font-weight: 700;">Innovación</td><td>Red Team automatizado con agentes <strong>CrewAI</strong> operando como un <strong>Adversarial ML (Macro-GAN)</strong>: el LLM genera evasiones (Generador) para fortalecer al modelo (Discriminador) en un ciclo de mejora continua.</td></tr>
+        <tr><td style="color: var(--accent); font-weight: 700;">Documentación</td><td>MkDocs publicada en GitHub Pages.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: FLUJO COMPLETO -->
+  <div class="slide" id="s3">
+    <div class="label">Diagrama de Arquitectura</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Flujo Completo (Stages 0–10)</h2>
+    
+    <div class="diagram-container" style="margin-top: 10px;">
+      <svg viewBox="0 0 1000 520" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+        
+        <!-- STAGE 0 -->
+        <rect x="40" y="20" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="145" y="45" class="node-label" fill="var(--text)" font-size="12">0. CURADO</text>
+        <text x="145" y="65" class="node-label" fill="var(--accent)">Airflow (dag_curate_dataset)</text>
+        <text x="145" y="85" class="node-label" fill="var(--text-muted)">Limpieza y validación</text>
+        <text x="145" y="100" class="node-label" fill="var(--text-muted)">Out: curation_report.md</text>
+
+        <!-- STAGE 1 -->
+        <rect x="290" y="20" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--border)" stroke-width="2"/>
+        <text x="395" y="45" class="node-label" fill="var(--text)" font-size="12">1. EXPLORACIÓN</text>
+        <text x="395" y="65" class="node-label" fill="var(--orange)">DS / Blue Team (Notebook)</text>
+        <text x="395" y="85" class="node-label" fill="var(--text-muted)">EDA: distribuciones, morfología</text>
+        <text x="395" y="100" class="node-label" fill="var(--text-muted)">Diseño de features</text>
+
+        <!-- STAGE 2 -->
+        <rect x="540" y="20" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="645" y="45" class="node-label" fill="var(--text)" font-size="12">2. PREPROCESS</text>
+        <text x="645" y="65" class="node-label" fill="var(--accent)">Airflow (dag_preprocess)</text>
+        <text x="645" y="85" class="node-label" fill="var(--text-muted)">Extracción de 27 features</text>
+        <text x="645" y="100" class="node-label" fill="var(--text-muted)">Out: features_v5.parquet</text>
+
+        <!-- STAGE 3 -->
+        <rect x="790" y="20" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--border)" stroke-width="2"/>
+        <text x="895" y="45" class="node-label" fill="var(--text)" font-size="12">3. PROTOTIPADO</text>
+        <text x="895" y="65" class="node-label" fill="var(--orange)">Data Science (Notebook)</text>
+        <text x="895" y="85" class="node-label" fill="var(--text-muted)">Compara LR, RF, XGB, LGBM</text>
+        <text x="895" y="100" class="node-label" fill="var(--text-muted)">(skip_promote=True)</text>
+
+        <!-- STAGE 4 -->
+        <rect x="790" y="160" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="895" y="185" class="node-label" fill="var(--text)" font-size="12">4. TRAIN</text>
+        <text x="895" y="205" class="node-label" fill="var(--accent)">Airflow (dag_train)</text>
+        <text x="895" y="225" class="node-label" fill="var(--text-muted)">Entrena 4 modelos y calibra</text>
+        <text x="895" y="240" class="node-label" fill="var(--text-muted)">Tag: candidate</text>
+
+        <!-- STAGE 5 -->
+        <rect x="540" y="160" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="645" y="185" class="node-label" fill="var(--text)" font-size="12">5. PROMOTE</text>
+        <text x="645" y="205" class="node-label" fill="var(--accent)">Airflow (dag_promote)</text>
+        <text x="645" y="225" class="node-label" fill="var(--text-muted)">Mejor modelo con Recall ≥ 0.95</text>
+        <text x="645" y="240" class="node-label" fill="var(--text-muted)">Alias: @staging</text>
+
+        <!-- STAGE 6 -->
+        <rect x="290" y="160" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--accent2)" stroke-width="2"/>
+        <text x="395" y="185" class="node-label" fill="var(--text)" font-size="12">6. BLUE TEAM AUDIT</text>
+        <text x="395" y="205" class="node-label" fill="var(--accent2)">FastAPI (Puerto 5082)</text>
+        <text x="395" y="225" class="node-label" fill="var(--text-muted)">Pruebas DAST a @staging</text>
+        <text x="395" y="240" class="node-label" fill="var(--text-muted)">POST /approve → tag approved</text>
+
+        <!-- STAGE 7 -->
+        <rect x="40" y="160" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="145" y="185" class="node-label" fill="var(--text)" font-size="12">7. DEPLOY</text>
+        <text x="145" y="205" class="node-label" fill="var(--accent)">Airflow (dag_deploy_prod)</text>
+        <text x="145" y="225" class="node-label" fill="var(--text-muted)">Valida tag approved</text>
+        <text x="145" y="240" class="node-label" fill="var(--text-muted)">Alias: @production</text>
+
+        <!-- STAGE 8 -->
+        <rect x="40" y="300" width="210" height="90" rx="8" fill="var(--surface2)" stroke="var(--green)" stroke-width="2"/>
+        <text x="145" y="325" class="node-label" fill="var(--text)" font-size="12">8. API SERVING</text>
+        <text x="145" y="345" class="node-label" fill="var(--green)">FastAPI (@production)</text>
+        <text x="145" y="365" class="node-label" fill="var(--text-muted)">Endpoints de inferencia</text>
+        <text x="145" y="380" class="node-label" fill="var(--text-muted)">/predict/http</text>
+
+        <!-- STAGE 9 -->
+        <rect x="320" y="280" width="210" height="80" rx="8" fill="var(--surface2)" stroke="var(--accent2)" stroke-width="2"/>
+        <text x="425" y="305" class="node-label" fill="var(--text)" font-size="12">9. MONITOREO</text>
+        <text x="425" y="325" class="node-label" fill="var(--accent2)">Blue Team + AIOps</text>
+        <text x="425" y="345" class="node-label" fill="var(--text-muted)">FP rate, latencia, recall</text>
+
+        <!-- STAGE 10 -->
+        <rect x="320" y="380" width="210" height="80" rx="8" fill="var(--surface2)" stroke="var(--red)" stroke-width="2"/>
+        <text x="425" y="405" class="node-label" fill="var(--text)" font-size="12">10. RED TEAM</text>
+        <text x="425" y="425" class="node-label" fill="var(--red)">CrewAI Agentes</text>
+        <text x="425" y="445" class="node-label" fill="var(--text-muted)">Prueba evasión (< 85%)</text>
+        
+        <!-- FEEDBACK LOOP -->
+        <rect x="645" y="330" width="210" height="60" rx="8" fill="var(--surface2)" stroke="var(--orange)" stroke-width="2" stroke-dasharray="4,4"/>
+        <text x="750" y="355" class="node-label" fill="var(--orange)" font-size="12">FEEDBACK LOOP</text>
+        <text x="750" y="375" class="node-label" fill="var(--text-muted)">MLOps → re-training</text>
+
+        <!-- ARROWS -->
+        <!-- Row 1 -->
+        <path d="M 250 65 L 290 65" class="connector active-flow" stroke="var(--text-muted)"/>
+        <path d="M 500 65 L 540 65" class="connector active-flow" stroke="var(--text-muted)"/>
+        <path d="M 750 65 L 790 65" class="connector active-flow" stroke="var(--text-muted)"/>
+        <!-- Row 1 to Row 2 -->
+        <path d="M 895 110 L 895 160" class="connector active-flow" stroke="var(--text-muted)"/>
+        <!-- Row 2 -->
+        <path d="M 790 205 L 750 205" class="connector active-flow" stroke="var(--text-muted)"/>
+        <path d="M 540 205 L 500 205" class="connector active-flow" stroke="var(--text-muted)"/>
+        <path d="M 290 205 L 250 205" class="connector active-flow" stroke="var(--text-muted)"/>
+        <!-- Row 2 to Row 3 -->
+        <path d="M 145 250 L 145 300" class="connector active-flow" stroke="var(--text-muted)"/>
+        
+        <!-- Row 3 Forks -->
+        <path d="M 250 345 L 285 345 L 285 320 L 320 320" class="connector active-flow" stroke="var(--accent2)"/>
+        <path d="M 250 345 L 285 345 L 285 420 L 320 420" class="connector active-flow" stroke="var(--red)"/>
+        
+        <!-- Feedback paths -->
+        <path d="M 530 320 L 585 320 L 585 360 L 645 360" class="connector active-flow" stroke="var(--orange)"/>
+        <path d="M 530 420 L 585 420 L 585 360 L 645 360" class="connector active-flow" stroke="var(--orange)"/>
+        <path d="M 750 330 L 750 280 L 895 280 L 895 250" class="connector active-flow" stroke="var(--orange)"/>
+
+      </svg>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: DATASET -->
+  <div class="slide" id="s4">
+    <div class="label">Fundamentos de Datos</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Dataset: CSIC 2010</h2>
+    <p style="font-size: 15px; max-width: 950px; margin-bottom: 20px;">
+      Desarrollado por el Instituto de Seguridad de la Información (CSIC, España). Contiene miles de peticiones HTTP dirigidas a un e-commerce, como benchmark académico para detección de ataques web. Utilizamos un formato tabular (Kaggle).
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1.2fr; gap: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card blue" style="padding: 20px;">
+          <table style="font-size: 13px; line-height: 1.4;">
+            <tr><td style="color: var(--accent); font-weight: 700;">Origen</td><td>CSIC (2010)</td></tr>
+            <tr><td style="color: var(--accent); font-weight: 700;">Fuente actual</td><td>Kaggle (CSV)</td></tr>
+            <tr><td style="color: var(--green); font-weight: 700;">Normales</td><td>36,000 (~59%)</td></tr>
+            <tr><td style="color: var(--red); font-weight: 700;">Ataques</td><td>25,065 (~41%)</td></tr>
+            <tr><td style="font-weight: 700;">Total</td><td>61,065 requests</td></tr>
+          </table>
+        </div>
+        
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">Tipos de ataques cubiertos</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Information Gathering, Files Disclosure, Cross-Site Scripting (XSS), SQL Injection (SQLi), CRLF Injection, Cross-Site Request Forgery (CSRF), Parameter Tampering.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card orange" style="padding: 20px;">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">¿Por qué un dataset balanceado (59:41)?</h3>
+          <p style="font-size: 13px; margin-bottom: 10px;">
+            El ratio no representa un entorno de producción real (&lt; 1% ataques). Sin embargo, brinda ventajas:
+          </p>
+          <ul style="font-size: 13px; padding-left: 20px; color: var(--text-muted); margin-bottom: 10px;">
+            <li><strong>Training estable:</strong> Permite aprender clases minoritarias sin remuestreo sintético (SMOTE).</li>
+            <li><strong>Baseline confiable:</strong> Métricas claras antes del rigor del desbalance operativo.</li>
+          </ul>
+          <p style="font-size: 12px; color: var(--accent);">* Para compensar el desbalance de producción, se aplica <strong>Threshold Calibration</strong>.</p>
+        </div>
+
+        <div class="card red" style="padding: 20px;">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">Limitaciones y Mitigación</h3>
+          <table style="font-size: 12px; line-height: 1.4;">
+            <tr>
+              <td style="color: var(--red); font-weight: 700; width: 25%;">Antigüedad</td>
+              <td>Faltan técnicas modernas (JSON, GraphQL, Desync).</td>
+              <td style="color: var(--green); font-weight: 700;">🛡️ Red Team Agent prueba payloads frescos (GitHub).</td>
+            </tr>
+            <tr>
+              <td style="color: var(--red); font-weight: 700;">Morfología</td>
+              <td>Baja variedad de paths vs. red real.</td>
+              <td style="color: var(--green); font-weight: 700;">🛡️ Feedback Loop (re-train si detección &lt; 85%).</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 5: ARQUITECTURA Y ROLES -->
+  <div class="slide" id="s5">
+    <div class="label">Operaciones de Seguridad</div>
+    <h2 style="font-size: 36px; margin-bottom: 10px;">Arquitectura: Visión General y Roles</h2>
+    
+    <div class="grid" style="grid-template-columns: 1.1fr 1fr; gap: 20px; height: 100%;">
+      
+      <!-- ASCII Diagram Column -->
+      <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; background: #0a0a0a;">
+        <div style="background: var(--surface2); padding: 8px 15px; font-weight: 600; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-muted); display: flex; gap: 6px; align-items: center;">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--red);"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--orange);"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--green);"></div>
+          <span style="margin-left: 10px;">pipeline_completo.txt</span>
+        </div>
+        <div style="padding: 15px; overflow-y: auto; flex-grow: 1;">
+<pre style="font-family: 'Courier New', monospace; font-size: 9px; color: var(--green); line-height: 1.2; margin: 0;">
+=========================================================
+                    MLSecOps Pipeline
+=========================================================
+
+[Dataset CSIC 2010 — data/raw/csic_database.csv]
+      │
+      ▼
++-------------------------------------------------------+
+| ⚙️ Stage 0: dag_curate_dataset     (MLOps)            |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| 📓 Stage 1: csic2010_eda.ipynb     (Data Sci / Blue)  |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| ⚙️ Stage 2: dag_preprocess         (MLOps)            |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| 📓 Stage 3: model_experiments      (Data Science)     |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| ⚙️ Stage 4: dag_train              (MLOps)            |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| ⚙️ Stage 5: dag_promote_model      (MLOps)            |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| 🛡️ Stage 6: Validación de Staging  (Blue Team)        |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| ⚙️ Stage 7: dag_deploy_prod        (MLOps)            |
++-------------------------------------------------------+
+      │
+      ▼
++-------------------------------------------------------+
+| 🚀 Stage 8: model_serving API      (FastAPI)          |
++-------------------------------------------------------+
+      │
+      ├──▶ Stage 9: MONITOREO        (Blue Team)
+      │
+      └──▶ Stage 10: RED TEAM        (CrewAI)
+      │
+      ▼
+[ FEEDBACK LOOP → MLOps re-training ]
+</pre>
+        </div>
+      </div>
+
+      <!-- Roles Table Column -->
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        <p style="font-size: 14px; margin-bottom: 5px;">
+          El pipeline MLOps está unificado bajo una nomenclatura estándar de <strong>11 fases (Stages 0 al 10)</strong>, integrando perfiles técnicos con responsabilidades claras.
+        </p>
+
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.4;">
+            <thead>
+              <tr style="background: var(--surface2); border-bottom: 2px solid var(--border);">
+                <th style="padding: 12px 15px; text-align: left; color: var(--text); width: 25%;">Equipo</th>
+                <th style="padding: 12px 15px; text-align: left; color: var(--text);">Misión principal</th>
+                <th style="padding: 12px 15px; text-align: left; color: var(--text);">Actividad en el pipeline</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 15px; color: var(--orange); font-weight: 700;">Data Science</td>
+                <td style="padding: 15px;">Diseñar features y evaluar algoritmos.</td>
+                <td style="padding: 15px; color: var(--text-muted);">Stages 1 y 3 (notebooks). Calibrar threshold.</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 15px; color: var(--accent); font-weight: 700;">MLOps</td>
+                <td style="padding: 15px;">Automatizar tubería e infraestructura.</td>
+                <td style="padding: 15px; color: var(--text-muted);">Stages 0, 2, 4, 5 y 7 (DAGs). Docker Compose.</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 15px; color: var(--accent2); font-weight: 700;">Blue Team</td>
+                <td style="padding: 15px;">Defensa proactiva y auditoría.</td>
+                <td style="padding: 15px; color: var(--text-muted);">Stage 6: DAST en staging. Stage 9: Monitoreo.</td>
+              </tr>
+              <tr>
+                <td style="padding: 15px; color: var(--red); font-weight: 700;">Red Team</td>
+                <td style="padding: 15px;">Simulación de adversarios.</td>
+                <td style="padding: 15px; color: var(--text-muted);">Stage 10: Payloads frescos. Reportes FN.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 6: STAGE 0 -->
+  <div class="slide" id="s6">
+    <div class="label" style="color: var(--accent);">MLOps en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 0: Curado del Dataset</h2>
+    <p style="font-size: 16px; max-width: 950px; margin-bottom: 30px;">
+      El primer paso del pipeline (orquestado vía <code>dag_curate_dataset</code>) asegura el cumplimiento de compliance escaneando <strong>PII (Personally Identifiable Information)</strong> y datos confidenciales. <span style="color: var(--orange);">Importante: Solo escanea y reporta, no modifica la data cruda.</span>
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--accent);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">🔍 ¿Qué busca el DAG?</h3>
+          <div style="margin-bottom: 15px;">
+            <strong style="color: var(--accent2); font-size: 14px;">PII (Personally Identifiable Information)</strong>
+            <ul style="font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 20px;">
+              <li>Session tokens (<code>JSESSIONID</code>)</li>
+              <li>Números de teléfono</li>
+              <li>Correos electrónicos</li>
+              <li>Direcciones IPv4</li>
+            </ul>
+          </div>
+          <div>
+            <strong style="color: var(--orange); font-size: 14px;">Menciones a Organizaciones</strong>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">Hackademy, Ekoparty, CSIC, Univ. de Granada.</p>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">⚠️ Falsos Positivos Comunes</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Se suelen detectar teléfonos y tokens en el campo <code>content</code> que en realidad son parte de <strong>payloads de ataques SQLi</strong> o sesiones sintéticas. Requiere revisión humana del reporte final.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; background: #0a0a0a;">
+          <h3 style="font-size: 14px; margin-bottom: 15px; color: var(--green);">Flujo de Ejecución (Airflow)</h3>
+          <pre style="font-family: 'Courier New', monospace; font-size: 12px; color: var(--green); line-height: 1.5; margin: 0;">
+[ Raw CSV ]
+     │
+     ▼
+(1) verify_input
+     │
+     ▼
+(2) scan_pii
+     │
+     ▼
+(3) generate_report
+     │
+     ▼
+[ curation_report.md ]
+          </pre>
+        </div>
+
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--red);">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">📄 Output: Curation Report</h3>
+          <p style="font-size: 13px; margin-bottom: 10px;">El pipeline finaliza generando un documento Markdown (<code>curation_report.md</code>) con:</p>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px;">
+            <li>Recuento total de hallazgos por tipo de PII.</li>
+            <li>Balance de clases (Normal vs Ataque).</li>
+            <li>Checkbox de Sign-off para aprobación del equipo MLOps.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 7: STAGE 1 -->
+  <div class="slide" id="s7">
+    <div class="label" style="color: var(--orange);">Data Science / Blue Team</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 1: Exploración (EDA)</h2>
+    <p style="font-size: 16px; max-width: 950px; margin-bottom: 30px;">
+      Análisis profundo en <code>csic2010_eda.ipynb</code> antes de escribir código de producción. Aquí no hay DAGs, solo investigación humana para descubrir dónde viven los patrones de ataque.
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1.2fr; gap: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--orange);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">📊 Hallazgos en Métodos HTTP</h3>
+          <table style="width: 100%; font-size: 13px; line-height: 1.4; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+              <th style="padding: 8px; text-align: left;">Método</th>
+              <th style="padding: 8px; text-align: right;">Normales</th>
+              <th style="padding: 8px; text-align: right;">Ataques</th>
+              <th style="padding: 8px; text-align: right; color: var(--red);">% Ataque</th>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px; font-weight: 700;">GET</td>
+              <td style="padding: 8px; text-align: right;">28.000</td>
+              <td style="padding: 8px; text-align: right;">15.088</td>
+              <td style="padding: 8px; text-align: right; color: var(--accent2);">35%</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px; font-weight: 700;">POST</td>
+              <td style="padding: 8px; text-align: right;">8.000</td>
+              <td style="padding: 8px; text-align: right;">9.580</td>
+              <td style="padding: 8px; text-align: right; color: var(--orange);">54%</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: 700;">PUT</td>
+              <td style="padding: 8px; text-align: right;">0</td>
+              <td style="padding: 8px; text-align: right;">397</td>
+              <td style="padding: 8px; text-align: right; color: var(--red); font-weight: bold;">100%</td>
+            </tr>
+          </table>
+          <p style="font-size: 12px; color: var(--accent); margin-top: 10px;">
+            * El método PUT es un indicador perfecto de compromiso.
+          </p>
+        </div>
+
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">📉 Calidad de Datos</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Se encontró que ~70% de las filas no tienen <em>body</em> (peticiones GET). Se decidió fijar <code>content_length = 0</code> en lugar de imputar con la media para evitar sesgos.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--green);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">🛠️ Decisiones para Preprocessing</h3>
+          <p style="font-size: 13px; margin-bottom: 15px;">El EDA define las reglas empíricas que luego MLOps automatizará en el Stage 2:</p>
+          
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6;">
+            <li><strong>Descarte de Ruido:</strong> Se eliminan 11 columnas irrelevantes o constantes (ej. <code>User-Agent</code>, <code>Accept</code>).</li>
+            <li><strong>One-Hot Encoding:</strong> El método HTTP pasa a ser <code>method_is_get</code>, <code>method_is_post</code>, <code>method_is_put</code>.</li>
+            <li><strong>Regex Features:</strong> Se crean variables binarias para indicadores de ataque como <code>%27</code> (SQLi), <code>script</code> (XSS) y <code>SELECT</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 8: STAGE 2 -->
+  <div class="slide" id="s8">
+    <div class="label" style="color: var(--accent);">MLOps en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 2: Preprocessing</h2>
+    <p style="font-size: 16px; max-width: 950px; margin-bottom: 30px;">
+      Transformación automatizada de las peticiones HTTP crudas en una <strong>matriz numérica de features (v5)</strong>. <span style="color: var(--orange);">Aquí no se entrena ningún modelo</span>, solo preparamos la data para los Stages 3 y 4.
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--accent);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">⚙️ Ingeniería de Features</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Se generan <strong>27 features numéricas</strong> basadas en las reglas empíricas descubiertas en el EDA.</p>
+          
+          <table style="width: 100%; font-size: 12px; line-height: 1.4; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+              <th style="padding: 8px; text-align: left;">Categoría</th>
+              <th style="padding: 8px; text-align: center;">Cantidad</th>
+              <th style="padding: 8px; text-align: left;">Ejemplos</th>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px; font-weight: 700;">Método HTTP</td>
+              <td style="padding: 8px; text-align: center; color: var(--accent2);">3</td>
+              <td style="padding: 8px; color: var(--text-muted);"><code>method_is_get</code>, <code>put</code>, <code>post</code></td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px; font-weight: 700;">URL Features</td>
+              <td style="padding: 8px; text-align: center; color: var(--orange);">11</td>
+              <td style="padding: 8px; color: var(--text-muted);"><code>url_length</code>, <code>url_has_pct27</code></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: 700;">Content Features</td>
+              <td style="padding: 8px; text-align: center; color: var(--red);">9</td>
+              <td style="padding: 8px; color: var(--text-muted);"><code>content_length</code>, <code>has_script</code></td>
+            </tr>
+          </table>
+          <p style="font-size: 12px; color: var(--accent); margin-top: 15px;">
+            + 4 Ratio features añadidas en v5 tras el análisis de falsos positivos en producción.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; background: #0a0a0a;">
+          <h3 style="font-size: 14px; margin-bottom: 15px; color: var(--green);">Flujo de Ejecución (Airflow DAG)</h3>
+          <pre style="font-family: 'Courier New', monospace; font-size: 12px; color: var(--green); line-height: 1.5; margin: 0;">
+[ csic_database.csv ]
+     │
+     ▼
+(1) verify_input
+     │
+     ▼
+(2) generate_features  --> preprocess_csic.py
+     │
+     ▼
+(3) verify_output
+     │
+     ▼
+[ features_v5.parquet ]
+          </pre>
+        </div>
+
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--green);">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">💾 Output de Alto Rendimiento</h3>
+          <p style="font-size: 13px; margin-bottom: 10px;">
+            El dataset procesado se guarda como <code>features_v5.parquet</code>.
+          </p>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px;">
+            <li>Formato columnar binario optimizado para Spark/Pandas.</li>
+            <li>Dimensiones finales: <strong>61.065 filas × 28 columnas</strong> (27 features + label).</li>
+            <li>Listo para la ingesta masiva en los algoritmos de ML.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 9: STAGE 3 -->
+  <div class="slide" id="s9">
+    <div class="label" style="color: var(--orange);">Data Science</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 3: Prototipado y Experimentos</h2>
+    <p style="font-size: 16px; max-width: 950px; margin-bottom: 30px;">
+      Ejecución interactiva desde <strong><code>model_csic_experiments.ipynb</code></strong>. Entrenamiento y comparación manual de <strong>4 algoritmos</strong> en un entorno seguro antes de automatizar. <span style="color: var(--orange);">Importante: <code>skip_promote=True</code> garantiza que los modelos de prueba no toquen el Registry de producción.</span>
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1.2fr; gap: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--orange);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">🧪 Algoritmos Evaluados</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Se entrenan usando diferentes estrategias para mitigar el desbalance (59:41):</p>
+          <ul style="font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 20px; line-height: 1.6;">
+            <li><strong>Logistic Regression:</strong> <code>class_weight='balanced'</code></li>
+            <li><strong>Random Forest:</strong> <code>class_weight='balanced'</code></li>
+            <li><strong>XGBoost:</strong> <code>scale_pos_weight</code></li>
+            <li><strong>LightGBM:</strong> <code>scale_pos_weight</code></li>
+          </ul>
+        </div>
+
+        <div class="card" style="padding: 20px; background: #0a0a0a;">
+          <h3 style="font-size: 14px; margin-bottom: 15px; color: var(--green);">Mismo código, entorno seguro</h3>
+          <pre style="font-family: 'Courier New', monospace; font-size: 11px; color: var(--green); line-height: 1.4; margin: 0;">
+from src.mlsec.data.train_model_a import train_model_a
+
+results = train_model_a(
+    features_path=FEATURES_PATH,
+    model_name='model-csic',
+    <span style="color: var(--orange);">skip_promote=True</span> # ← Safe guard
+)
+          </pre>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--green);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">🏆 Run Canónico (Features v5)</h3>
+          <p style="font-size: 13px; margin-bottom: 15px;">
+            Criterio de selección: <strong>Recall ≥ 0.95</strong> → Maximizar Precision.
+          </p>
+          
+          <table style="width: 100%; font-size: 13px; line-height: 1.4; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+              <th style="padding: 8px; text-align: left;">Modelo</th>
+              <th style="padding: 8px; text-align: right;">Recall</th>
+              <th style="padding: 8px; text-align: right;">Precision</th>
+              <th style="padding: 8px; text-align: right;">FP</th>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px;">Log Reg</td>
+              <td style="padding: 8px; text-align: right;">0.9649</td>
+              <td style="padding: 8px; text-align: right;">0.4808</td>
+              <td style="padding: 8px; text-align: right; color: var(--red);">3917</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px;">Random Forest</td>
+              <td style="padding: 8px; text-align: right;">0.9492</td>
+              <td style="padding: 8px; text-align: right;">0.7776</td>
+              <td style="padding: 8px; text-align: right;">1021</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border); background: rgba(0, 255, 0, 0.05);">
+              <td style="padding: 8px; font-weight: 700; color: var(--green);">XGBoost ✅</td>
+              <td style="padding: 8px; text-align: right; font-weight: 700;">0.9535</td>
+              <td style="padding: 8px; text-align: right; font-weight: 700; color: var(--green);">0.7944</td>
+              <td style="padding: 8px; text-align: right; font-weight: 700; color: var(--green);">928</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px;">LightGBM</td>
+              <td style="padding: 8px; text-align: right;">0.9553</td>
+              <td style="padding: 8px; text-align: right;">0.7917</td>
+              <td style="padding: 8px; text-align: right;">945</td>
+            </tr>
+          </table>
+          <p style="font-size: 12px; color: var(--accent); margin-top: 15px;">
+            * Las 4 "ratio features" añadidas en v5 mejoran la precisión de XGBoost en +0.023 vs v4.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 10: STAGE 4 -->
+  <div class="slide" id="s10">
+    <div class="label" style="color: var(--accent);">MLOps en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 4: Train Model A (Automatizado)</h2>
+    <p style="font-size: 16px; max-width: 950px; margin-bottom: 30px;">
+      El DAG de Airflow orquesta el entrenamiento en producción, pero siguiendo un principio <strong>DRY (Don't Repeat Yourself)</strong>: el script usa exactamente la misma función (<code>train_model_a</code>) que Data Science usó en el Stage 3.
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--accent);">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">📐 Criterios de Aceptación (Threshold Calibration)</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+            En datasets desbalanceados de seguridad, el threshold de clasificación nunca es 0.5. Se busca el threshold óptimo que cumpla con los siguientes criterios duros:
+          </p>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6;">
+            <li><strong>Recall ≥ 0.95:</strong> Detectar al menos el 95% de los ataques reales.</li>
+            <li><strong>Precision ≥ 0.75:</strong> De las alertas positivas, al menos el 75% deben ser ataques reales.</li>
+            <li><strong>Gap val-test ≤ 0.05:</strong> Diferencia de precisión entre validación y test para evitar overfitting.</li>
+          </ul>
+          <div style="margin-top: 15px; padding: 10px; background: rgba(255,0,0,0.1); border: 1px solid var(--red); color: var(--red); font-size: 12px; font-weight: bold;">
+            Si el modelo no pasa estos criterios, Falla y NO se registra.
+          </div>
+        </div>
+
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 14px; margin-bottom: 10px;">⚙️ Detalle de Ejecución (<code>train_model_a.py</code>)</h3>
+          <ol style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6; margin: 0;">
+            <li><strong>Carga de datos:</strong> Lee <code>features_v5.parquet</code> del Stage 2.</li>
+            <li><strong>Split Estratificado:</strong> 70% Train, 15% Val, 15% Test (mantiene el ratio 59:41).</li>
+            <li><strong>Pipelines Nativos:</strong> Envuelve un <code>StandardScaler</code> (para variables continuas) y el clasificador dentro de un <strong>Pipeline de Scikit-Learn</strong> para un empaquetado 100% atómico y prolijo (adiós a exportar archivos <code>scaler_info.json</code> sueltos).</li>
+            <li><strong>Training & Auto-Selección:</strong> Entrena los 4 algoritmos (Regresión, RF, XGBoost, LightGBM) desde cero, los evalúa y elige automáticamente al ganador. ¡El algoritmo no está <em>hardcodeado</em>!</li>
+            <li><strong>Thresholding:</strong> Busca matemáticamente el punto óptimo en validación para alcanzar Recall ≥ 0.95 maximizando Precision.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--green); background: #0a0a0a;">
+          <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--green);">📊 Integración MLflow (Tracking & Registry)</h3>
+          
+          <pre style="font-family: 'Courier New', monospace; font-size: 12px; color: var(--green); line-height: 1.4; margin: 0; padding: 10px; border: 1px dashed var(--green); background: rgba(0,255,0,0.05);">
+[DAG: train_models]
+       │
+       ▼
+   MLFLOW EXPERIMENT (model-csic)
+   ├── Run 1: LogisticRegression (Tags: v5, logloss)
+   ├── Run 2: RandomForest (Tags: v5, class_weight)
+   ├── Run 3: XGBoost (Tags: v5, scale_pos_weight)
+   └── Run 4: LightGBM (Tags: v5, scale_pos_weight)
+       │
+       ▼
+[EVALUACIÓN AUTOMÁTICA]
+¿Mejor modelo pasa los criterios de Recall/Precision?
+       │
+       ├── Sí ──> Registra modelo (versión N) en Registry
+       │
+       └── No ──> Falla el DAG. Requiere revisión.
+          </pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 11: STAGE 5 -->
+  <div class="slide" id="s11">
+    <div class="label" style="color: var(--accent);">MLOps / Gobernanza</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 5: Promote to Staging</h2>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <p style="font-size: 16px; max-width: 950px; margin-bottom: 20px;">
+          El <strong>Gatekeeper Automático</strong>. Este proceso orquestado actúa como puente formal entre el entorno de Machine Learning (creación) y Ciberseguridad (evaluación).
+        </p>
+
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 14px; margin-bottom: 10px;">⚙️ Pipeline de Promoción (<code>dag_promote_model.py</code>)</h3>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6; margin: 0;">
+            <li><strong>Ejecutor:</strong> Tarea 100% automatizada orquestada por <strong>Airflow</strong>.</li>
+            <li><strong>Filtro de Seguridad (Regla de Negocio):</strong> Escanea todos los modelos experimentales y exige un mínimo innegociable: <code>Recall >= 0.95</code> (no podemos dejar pasar ataques).</li>
+            <li><strong>Selección del Campeón:</strong> Entre los modelos que aprueban, selecciona automáticamente el que tenga la mayor <strong>Precisión</strong> (para evitar bloquear tráfico sano).</li>
+            <li><strong>Tags vs Aliases:</strong> Al ganador se le asigna el <strong>Tag</strong> <code>candidate</code> (metadata de estado) y simultáneamente el <strong>Alias</strong> <code>staging</code> (el puntero técnico de entorno). Finalmente, dispara la alerta al Blue Team vía AWS SNS/Slack.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--accent); background: #0a0a0a;">
+          <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--accent);">🔔 Alerta y Hand-off</h3>
+          
+          <pre style="font-family: 'Courier New', monospace; font-size: 12px; color: var(--text-muted); line-height: 1.4; margin: 0; padding: 10px; border: 1px dashed var(--accent); background: rgba(0,255,255,0.05);">
+[MLflow Model Registry]
+   ├─ model-csic (v6)
+   │    └─ tags: {deployment_stage: candidate}
+   │
+   ▼
+[Airflow Gatekeeper] ───(Promote)───> [Staging]
+   │
+   ▼
+[AWS SNS / Slack Webhook]
+{
+  "alert": "🚨 Nuevo Modelo en Staging",
+  "model": "model-csic v6 (XGBoost)",
+  "action_required": "Blue Team, iniciar 
+                      ataque ofensivo."
+}
+          </pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 12: STAGE 6 -->
+  <div class="slide" id="s12">
+    <div class="label" style="color: var(--green);">Blue Team en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 6: Auditoría Blue Team</h2>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <p style="font-size: 16px; max-width: 950px; margin-bottom: 20px;">
+          El <strong>Blue Team</strong> entra en escena. Las métricas matemáticas no bastan; un experto humano debe validar que el modelo es robusto frente a ataques reales y técnicas de evasión antes de tocar el tráfico de producción.
+        </p>
+
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--green);">
+          <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--green);">🛡️ Proceso de Auditoría Manual</h3>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6; margin: 0;">
+            <li><strong>Despliegue Aislado (FastAPI):</strong> Se levanta un microservicio que descarga el modelo de MLflow y expone endpoints de seguridad:
+              <ul style="margin-top: 5px; margin-bottom: 5px; list-style-type: circle; color: var(--text-muted);">
+                <li><code>GET /health</code>: Estado del servicio y modelo cargado.</li>
+                <li><code>GET /model/info</code>: Auditoría de versión y threshold.</li>
+                <li><code>POST /predict</code> y <code>/predict/http</code>: Predicción por features o HTTP crudo.</li>
+                <li><code>POST /model/approve</code>: Sella criptográficamente la auditoría.</li>
+              </ul>
+            </li>
+            <li><strong>Ataques Ofensivos:</strong> Se lanzan baterías de pruebas manuales y automatizadas contra los endpoints (DAST, Fuzzing).</li>
+            <li><strong>Prueba de Falsos Positivos:</strong> Se inyecta tráfico legítimo complejo para asegurar que no se bloquee a usuarios reales por error.</li>
+            <li><strong>Decisión Final (Firma del SOC):</strong> Si sobrevive, el SOC dispara el endpoint <code>/model/approve</code>. Esto cambia el <strong>Tag</strong> a <code>approved</code>, pero deja el <strong>Alias</strong> intacto en <code>staging</code>. Es un pase formal para que el DAG de Producción (Stage 7) haga su magia.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; background: #0a0a0a;">
+          <h3 style="font-size: 16px; margin-bottom: 15px;">🔍 Consola del Analista SOC</h3>
+          
+          <pre style="font-family: 'Courier New', monospace; font-size: 12px; color: var(--green); line-height: 1.4; margin: 0; padding: 10px; border: 1px dashed var(--green); background: rgba(0,255,0,0.05);">
+$ curl -X POST https://waf-staging.interna/predict \
+  -H "Content-Type: application/json" \
+  -d '{"url": "/login?user=admin' OR 1=1--"}'
+
+> HTTP 200 OK
+> {
+>   "prediction": "Attack",
+>   "confidence": 0.98,
+>   "model_version": "v6"
+> }
+
+✓ Test SQLi Passed.
+✓ Test XSS Passed.
+✓ Test Evasion Passed.
+
+>> APROBACIÓN MANUAL REQUERIDA.
+>> Actualizando tag en MLflow a: 'Production'
+          </pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 13: STAGE 7 -->
+  <div class="slide" id="s13">
+    <div class="label" style="color: var(--accent);">MLOps / DevOps</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 7: Deploy a Producción</h2>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <p style="font-size: 16px; margin-bottom: 10px;">
+          El despliegue a producción no es manual. Vuelve a tomar el control <strong>MLOps</strong> mediante un DAG de Airflow (<code>dag_deploy_prod</code>) diseñado bajo principios de Zero Trust.
+        </p>
+
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--accent);">
+          <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--accent);">⚙️ Automatización Segura</h3>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6; margin: 0;">
+            <li><strong>Validación Estricta (Zero Trust):</strong> El pipeline lee el Model Registry. Si la etiqueta no es exactamente <code>approved</code>, el despliegue falla inmediatamente. Nadie puede bypassear al Blue Team.</li>
+            <li><strong>Promoción en Registry:</strong> Si está aprobado, Airflow le asigna el nuevo <strong>Alias</strong> <code>production</code> (dejando intacto <code>staging</code> por si hay fallbacks) y actualiza el <strong>Tag</strong> a <code>production</code> guardando el timestamp exacto del evento (<code>deployed_at</code>).</li>
+            <li><strong>Notificación al Red Team:</strong> El ciclo de seguridad nunca termina. Al desplegar, se dispara una alerta automática avisando al Red Team que hay un nuevo objetivo en Producción listo para ser atacado (DAST continuo).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; justify-content: center; background: #0a0a0a; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+        <h3 style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px; text-align: center;">Flujo del DAG de Producción</h3>
+        <div class="mermaid" style="text-align: center;">
+graph TD
+    A["Trigger: dag_deploy_prod"] --> B{"¿Tiene tag<br>'approved'?"}
+    B -- "NO" --> C["❌ Falla el Pipeline"]
+    B -- "SÍ" --> D["✅ Alias 'production'<br>Tag 'production'"]
+    D --> E["🚨 Notificar RED TEAM"]
+    
+    style B fill:#222,stroke:#00ccff,stroke-width:2px,color:#fff
+    style D fill:#00ccff,stroke:#000,stroke-width:2px,color:#000
+    style E fill:#f00,stroke:#000,stroke-width:2px,color:#fff
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 14: STAGE 8 -->
+  <div class="slide" id="s14">
+    <div class="label" style="color: var(--text-muted);">Operación</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 8: API Serving</h2>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px;">
+      
+      <!-- Left Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <p style="font-size: 16px; margin-bottom: 10px;">
+          El modelo llega a su destino final. Se integra al <strong>WAF (Web Application Firewall)</strong> para proteger la infraestructura crítica de la empresa en tiempo real, operado por el equipo de <strong>AppSec / SecOps</strong>.
+        </p>
+
+        <div class="card" style="padding: 20px; border-left: 4px solid var(--text-muted);">
+          <h3 style="font-size: 14px; margin-bottom: 10px; color: #fff;">🌐 Inferencia Dinámica</h3>
+          <ul style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6; margin: 0;">
+            <li><strong>Pull de Producción:</strong> La API de inferencia (FastAPI) arranca y descarga automáticamente el binario del modelo que posea el alias <code>production</code>.</li>
+            <li><strong>State-of-the-Art Pipelines:</strong> Como el entrenamiento (Stage 4) empacó el escalador y el modelo en un único <strong>Scikit-Learn Pipeline</strong>, la API no tiene que lidiar con archivos sueltos (ej. el antiguo <code>scaler_info.json</code>). Pasa los datos crudos y el Pipeline hace el escalado al vuelo internamente.</li>
+            <li><strong>Latencia Ultra-baja:</strong> XGBoost fue elegido justamente por su velocidad. Bloquear o dejar pasar un request toma solo fracciones de milisegundo, sin afectar la experiencia del usuario.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" style="padding: 20px; border-top-color: #333;">
+          <h3 style="font-size: 16px; margin-bottom: 5px; color: #fff;">Arquitectura del WAF</h3>
+          <div class="mermaid" style="text-align: center;">
+graph TD
+    User[Tráfico Web] -->|HTTP Request| Nginx[Nginx Ingress]
+    
+    subgraph AI_WAF ["Stage 8: model_serving.py"]
+        Nginx -->|auth_request| API[FastAPI App]
+        API -->|"1. Infiere en 5ms"| Model(("XGBoost Pipeline"))
+        API -->|"2. Guarda Features"| CSV[("production_logs.csv")]
+    end
+    
+    API -.->|"HTTP 403 (Anomalía)"| Nginx
+    API -.->|"HTTP 200 (Limpio)"| Nginx
+    
+    Nginx -->|"Si es 200 OK"| Backend[Dummy Backend Web]
+    
+    style User fill:#000,stroke:#fff,color:#fff
+    style Nginx fill:#220,stroke:#ff0,color:#fff
+    style API fill:#020,stroke:#0f0,color:#fff
+    style Model fill:#002,stroke:#05f,color:#fff
+    style Backend fill:#333,stroke:#fff,color:#fff
+    style CSV fill:#505,stroke:#f0f,color:#fff
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px; text-align: center;">* El log <code>production_logs.csv</code> se utilizará en el <strong>Stage 9</strong> para monitorear Data Drift.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SLIDE 15: STAGE 9 -->
+  <div class="slide" id="s15">
+    <div class="label" style="color: var(--green);">Blue Team en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 9: Monitoreo de Data Drift</h2>
+    
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; text-align: left;">
+      <div class="card" style="border-top-color: var(--green);">
+        <h3 style="color: var(--green);">Observabilidad Matemática</h3>
+        <p>Los modelos no se rompen con excepciones de código, se degradan silenciosamente cuando los datos cambian. En MLSecOps monitoreamos el <strong>Data Drift</strong>: cuando el tráfico real (atacantes mutando) se desvía estadísticamente de nuestro dataset de entrenamiento.</p>
+        <ul style="color: var(--text-muted); font-size: 15px; margin-top: 15px; line-height: 1.6;">
+          <li><strong style="color: #fff;">Herramienta:</strong> Evidently AI.</li>
+          <li><strong style="color: #fff;">Orquestador:</strong> Apache Airflow (DAG diario).</li>
+          <li><strong style="color: #fff;">Reference Data:</strong> <code>features_v5.parquet</code> (El pasado).</li>
+          <li><strong style="color: #fff;">Current Data:</strong> <code>production_logs.csv</code> (El presente).</li>
+        </ul>
+      </div>
+
+      <div class="card" style="border-top-color: var(--green);">
+        <h3 style="color: var(--green);">Flujo de Monitoreo (Airflow DAG)</h3>
+        <div class="mermaid" style="text-align: center; margin-top: 15px;">
+graph TD
+    A[Tráfico Producción] -->|Nginx API| B(production_logs.csv)
+    C[Entrenamiento] -->|Original| D(features_v5.parquet)
+    
+    subgraph DAG [dag_stage9_monitoring.py]
+        E[1. check_production_logs] --> F[2. run_evidently_drift]
+    end
+
+    B -.-> E
+    B --> F
+    D --> F
+    F -->|stage9_monitoring.py| G[data_drift_report.html]
+    
+    style A fill:#000,stroke:#0f0,color:#fff
+    style C fill:#000,stroke:#0f0,color:#fff
+    style B fill:#220,stroke:#ff0,color:#fff
+    style D fill:#220,stroke:#ff0,color:#fff
+    style E fill:#020,stroke:#0f0,color:#fff
+    style F fill:#020,stroke:#0f0,color:#fff
+    style G fill:#002,stroke:#05f,color:#fff
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 16: STAGE 10.1 -->
+  <div class="slide" id="s16">
+    <div class="label" style="color: var(--red);">Red Team en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 10.1: OSINT & Threat Intelligence</h2>
+    
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; text-align: left;">
+      <div class="card" style="border-top-color: var(--red);">
+        <h3 style="color: var(--red);">Agente 1: Payload Hunter (GAN Seed)</h3>
+        <p>En una GAN clásica, el Generador arranca con ruido aleatorio. En nuestra Macro-GAN Semántica, el <em>Agente 1</em> usa <strong>OSINT</strong> para crear el Espacio Latente (Latent Space) de inyecciones altamente realistas.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #ff0055;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">📥 Input (Fuente)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">URLs crudas de repositorios de GitHub (ej. <em>PayloadsAllTheThings</em>).</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #ff0055;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">⚙️ Pruebas (Técnica)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">Parsing heurístico con LLM para separar ruido y extraer inyecciones puras.</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #ff0055;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🎯 Target (Objetivo)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">Repositorios Open Source de Cyber Threat Intelligence (CTI).</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #0f0;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">📤 Output (Salida)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">JSON estructurado listo para inyección.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top-color: var(--red);">
+        <h3 style="color: var(--red);">Output Estructurado (JSON)</h3>
+        <pre style="background: #111; color: #ff0055; padding: 15px; font-size: 12px; border-radius: 4px; overflow-x: auto; margin-top: 15px; border-left: 3px solid var(--red);">
+{
+  "payloads": [
+    {
+      "attack_type": "SQLi",
+      "payload": "admin' OR 1=1--",
+      "source": "PayloadsAllTheThings/Classic_sqli.txt",
+      "target_field": "url"
+    },
+    {
+      "attack_type": "Path Traversal",
+      "payload": "../../../../etc/passwd%00",
+      "target_field": "url"
+    }
+  ]
+}
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 17: STAGE 10.2 -->
+  <div class="slide" id="s17">
+    <div class="label" style="color: var(--red);">Red Team en Acción</div>
+    <h2 style="font-size: 42px; margin-bottom: 10px;">Stage 10.2: Adversarial ML (Simulación)</h2>
+    
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; text-align: left;">
+      <div class="card" style="border-top-color: var(--red);">
+        <h3 style="color: var(--red);">Macro-GAN Semántica (Arquitectura)</h3>
+        <p>Reemplazamos las inestables GANs tradicionales por un <strong>Enfoque Generativo Basado en LLMs</strong>. El Agente 2 actúa como un Generador Adversario Inteligente.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #ff0055;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🧠 Generador (Agent 2)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">Propone payloads ofensivos (SQLi, XSS) basados en el OSINT extraído.</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #05f;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🛡️ Discriminador (XGBoost WAF)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">La API de Producción (Stage 8) evalúa la petición. Devuelve 403 (Bloqueado) o 200 (Permitido).</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #ffaa00;">
+            <strong style="color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🔄 Feedback Loop (Mutación)</strong>
+            <p style="font-size: 14px; color: var(--text-muted); margin: 5px 0 0 0;">Si el ataque es bloqueado, el Agente razona la falla y <strong>muta el payload</strong> (ofuscación, encoding) iterativamente hasta lograr el Bypass.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top-color: var(--red);">
+        <h3 style="color: var(--red);">El Ciclo GAN (CrewAI Flow)</h3>
+        <p style="font-size: 13px; color: #ccc; margin-bottom: 10px;">
+          Utilizamos <strong>Process.sequential</strong> para inyectar el JSON de CTI en el Simulador. Luego, comienza la batalla iterativa Generador vs Discriminador.
+        </p>
+        <div class="mermaid" style="text-align: center; margin-top: 15px;">
+graph TD
+    H["Agent 1 (OSINT)"] -->|"Inyecta Contexto JSON"| Gen
+    
+    subgraph GAN ["Macro-GAN Semántica (Adversarial Loop)"]
+        Gen["Agent 2 (Generator)"] -->|"Envía HTTP Payload"| API
+        API(("API WAF (Discriminator)")) -->|"Retorna 403 (Bloqueado)"| Gen
+        Gen -.->|"Muta Payload (Encoding/Obfuscation)"| Gen
+    end
+    
+    API -->|"Retorna 200 (Bypass Exitoso)"| R["Reporte de Brechas"]
+    R -->|"Re-Entrenamiento"| DataLake["Data Lake (Stage 1)"]
+    
+    style H fill:#111,stroke:#fff,color:#fff
+    style Gen fill:#300,stroke:#f00,color:#fff
+    style API fill:#002,stroke:#05f,color:#fff
+    style R fill:#505,stroke:#f0f,color:#fff
+    style DataLake fill:#020,stroke:#0f0,color:#fff
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NAV INTERFACE -->
+<div class="nav">
+  <button id="prevBtn">←</button>
+  <div class="dots" id="dotBox"></div>
+  <div class="slide-count" id="slideCount">1 / 1</div>
+  <button id="nextBtn">→</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotBox = document.getElementById('dotBox');
+  const slideCountDisplay = document.getElementById('slideCount');
+  let current = 0;
+
+  // Init dots
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = `dot ${i === 0 ? 'active' : ''}`;
+    dot.onclick = () => goTo(i);
+    dotBox.appendChild(dot);
+  });
+
+  const dots = document.querySelectorAll('.dot');
+
+  function update() {
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === current);
+    });
+    dots.forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+    });
+    slideCountDisplay.textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  function goTo(idx) {
+    current = idx;
+    update();
+  }
+
+  document.getElementById('nextBtn').onclick = () => {
+    current = (current + 1) % slides.length;
+    update();
+  };
+  document.getElementById('prevBtn').onclick = () => {
+    current = (current - 1 + slides.length) % slides.length;
+    update();
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') document.getElementById('nextBtn').click();
+    if (e.key === 'ArrowLeft') document.getElementById('prevBtn').click();
+  });
+  
+  update();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+</script>
+
+</body>
+</html>

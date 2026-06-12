@@ -14,11 +14,13 @@ Evaluar 4 algoritmos de ML (LogisticRegression, RandomForest, XGBoost, LightGBM)
 
 ## Criterios de éxito
 
-| Métrica | Target | Estado |
-|---------|--------|--------|
-| Recall | >= 0.95 | ✅ 3 de 4 modelos cumplen |
-| Precision | >= 0.85 | ❌ Ninguno cumple (mejor: LGB 0.7918) |
-| Gap val-test | <= 0.05 | ✅ Todos cumplen (mejor: LGB 0.0049) |
+| Métrica | Target | Estado (run v5) |
+|---------|--------|------------------|
+| Recall | >= 0.95 | ✅ XGBoost 0.9535 (LightGBM 0.9553 también cumple) |
+| Precision | >= 0.85 | ❌ Ninguno cumple (mejor: **XGBoost 0.7944**) |
+| Gap val-test | <= 0.05 | ✅ Todos cumplen (mejor: LightGBM 0.0043) |
+
+**Criterio de selección:** recall ≥ 0.95 → mayor precision → **XGBoost**.
 
 ---
 
@@ -26,8 +28,8 @@ Evaluar 4 algoritmos de ML (LogisticRegression, RandomForest, XGBoost, LightGBM)
 
 **Notebook:** `notebooks/experiments/model_csic_experiments.ipynb`
 **Modelo Registry:** `model-csic`
-**Fecha ejecución:** 2026-05-21
 **Features:** `features_v5.parquet` (27 features)
+**Run canónico v5:** XGBoost (`d234a90a`)
 
 ### Configuración de experimentación
 
@@ -56,48 +58,52 @@ MLFLOW_TRACKING_URI = 'http://localhost:5081'
 
 ## Resultados obtenidos
 
-### Runs registrados en MLflow
+### Runs registrados en MLflow (features v5 — run canónico)
 
-| Run ID | Modelo | Description | Recall | Precision | ROC-AUC | FP | Gap |
-|--------|--------|-------------|--------|-----------|---------|-----|-----|
-| — | LogisticRegression | LR - 2026-05-21 | 0.9697 | 0.4739 | 0.8195 | 4047 | 0.0022 |
-| — | RandomForest | RF - 2026-05-21 | 0.9481 | 0.7782 | 0.9605 | 1016 | 0.0133 |
-| — | XGBoost | XGB - 2026-05-21 | 0.9577 | 0.7716 | 0.9634 | 1066 | 0.0139 |
-| — | LightGBM | LGB - 2026-05-21 | 0.9551 | 0.7918 | 0.9661 | 944 | 0.0049 |
+| Run ID | Modelo | Recall | Precision | ROC-AUC | FP | Gap |
+|--------|--------|--------|-----------|---------|-----|-----|
+| `b0c1fcc8` | LogisticRegression | 0.9649 | 0.4808 | 0.8209 | 3917 | 0.0017 |
+| `150f894f` | RandomForest | 0.9492 | 0.7776 | 0.9609 | 1021 | 0.0123 |
+| **`d234a90a`** | **XGBoost** | **0.9535** | **0.7944** | **0.9655** | **928** | 0.0054 |
+| `e1b30307` | LightGBM | 0.9553 | 0.7917 | 0.9662 | 945 | 0.0043 |
 
 ### Modelo seleccionado como mejor candidato
 
-**LightGBM** — cumple Recall >= 0.95 y tiene mayor Precision entre los que cumplen.
+**XGBoost (run `d234a90a`)** — cumple recall ≥ 0.95 y tiene **mayor precision** entre los que cumplen (0.7944 vs LightGBM 0.7917).
 
 | Métrica | Valor | Criterio | Estado |
 |---------|-------|----------|--------|
-| Recall | 0.9551 | >= 0.95 | ✅ |
-| Precision | 0.7918 | >= 0.85 | ❌ |
-| ROC-AUC | 0.9661 | — | — |
-| FP | 944 | — | — |
-| Gap precision | 0.0049 | <= 0.05 | ✅ |
-| Threshold | 0.2752 | — | — |
+| Recall | 0.9535 | >= 0.95 | ✅ |
+| Precision | 0.7944 | >= 0.85 | ❌ |
+| ROC-AUC | 0.9655 | >= 0.95 | ✅ |
+| FP | 928 | — | — |
+| Gap precision | 0.0054 | <= 0.05 | ✅ |
+| Threshold | 0.2502 | — | — |
+
+> **Nota histórica:** un run anterior con `features_v4` (2026-05-21) seleccionó LightGBM (precision 0.7918 vs XGBoost 0.7716). Con `features_v5`, las ratio features mejoran XGBoost +0.023 y este pasa a ser el candidato canónico.
 
 ---
 
 ## Análisis de resultados
 
-### Por qué LightGBM es el mejor
+### Por qué XGBoost es el mejor (run v5)
 
-1. **Recall >= 0.95:** Detecta 95.51% de los ataques
-2. **Mayor Precision:** 0.7918 vs XGBoost 0.7716
-3. **Menor Gap val-test:** 0.0049 — indica estabilidad
-4. **Menor FP:** 944 vs 1066 de XGBoost
+1. **Recall >= 0.95:** Detecta 95.35% de los ataques
+2. **Mayor Precision:** 0.7944 vs LightGBM 0.7917 (diferencia ~0.003)
+3. **Menor FP:** 928 vs 945 de LightGBM
+4. **Ratio features:** las 4 features adicionales de v5 benefician más a XGBoost (+0.023 precision vs v4)
+
+LightGBM mantiene mejor ROC-AUC (0.9662) y menor gap val-test (0.0043), pero **no gana en precision**, que es el criterio de desempate.
 
 ### Por qué Precision no llega a 0.85
 
 **Causa raíz:** El techo de Precision está en las features, no en el algoritmo.
 
-| Feature | Importancia (LightGBM) | Observación |
-|---------|----------------------|-------------|
-| url_length | ~1321 | Feature más importante |
-| content_length | ~701 | Ataques POST tienen bodies más largos |
-| content_pct_density | ~667 | Densidad de encoding en content |
+| Feature | Importancia (típica en boosting) | Observación |
+|---------|----------------------------------|-------------|
+| url_length | Alta | Feature más discriminativa |
+| content_length | Alta | Ataques POST tienen bodies más largos |
+| content_pct_density | Alta | Densidad de encoding en content |
 | content_pct_latin1_density | ~540 | No está en v4 (solo en v7) |
 | url_pct_latin1_density | ~527 | No está en v4 (solo en v7) |
 
@@ -123,8 +129,9 @@ Las features binarias (`url_has_pct27`, `content_has_dashdash`, etc.) capturan p
 ## FP Analysis — Resultados (2026-05-21)
 
 **Notebook:** `notebooks/experiments/model_csic_fp_analysis.ipynb`
-**Modelo:** LightGBM (threshold=0.2752)
-**FP totales:** 942 / 9160 en test set
+**Modelo analizado:** LightGBM (run v4, threshold=0.2752) — análisis exploratorio previo a v5
+**Candidato canónico actual:** XGBoost v5 (threshold=0.2502, FP=928)
+**FP totales (análisis LGB):** 942 / 9160 en test set
 
 ### Matriz de confusión
 

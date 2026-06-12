@@ -2,6 +2,15 @@
 
 ---
 
+## Ciclo de vida MLOps (Stages 0-10)
+
+El pipeline de PMT MLSecOps está estructurado en 11 fases discretas (Stages 0 al 10). Esta convención unificada rige todo el proyecto, desde la orquestación en Airflow hasta las pruebas del Red Team.
+
+Ver detalle de entradas/salidas en [Fases y Pipeline MLOps](arquitectura_fases.md).  
+Índice por stage: [Flujo completo 0–10](flujo_completo.md)
+
+---
+
 ## Diagrama de flujo completo
 
 ```text
@@ -9,90 +18,139 @@
                             MLSecOps Pipeline
 ================================================================================
 
-[Data Ingestion]
+[Dataset CSIC 2010 — data/raw/csic2010/csic_database.csv]
       │
       ▼
 +------------------------------------+
-| ⚙️ Step 1: dag_curate_dataset      | (MLOps)
-+------------------------------------+
-      │
-      ▼
-+------------------------------------+
-| 📓 Step 2: csic2010_eda.ipynb      | (Data Science / Blue Team)
+| ⚙️ Stage 0: dag_curate_dataset     | (MLOps) — escaneo PII, sin modificar datos
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| ⚙️ Step 3: dag_preprocess          | (MLOps)
+| 📓 Stage 1: csic2010_eda.ipynb     | (Data Science / Blue Team)
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| 📓 Step 4: experiments.ipynb       | (Data Science)
+| ⚙️ Stage 2: dag_preprocess         | (MLOps) → features_v5.parquet
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| ⚙️ Step 5: dag_train               | (MLOps) -> [Tag: candidate]
+| 📓 Stage 3: model_experiments      | (Data Science) — skip_promote=True
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| ⚙️ Step 6: dag_promote_model       | (MLOps) -> [Alias: @staging] -> [Alerta BT]
+| ⚙️ Stage 4: dag_train              | (MLOps) → 4 runs en MLflow
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| 🛡️ Step 7: Validación de Staging   | (Blue Team) -> Ataca API y aprueba 
-|            /model/approve          |                [Tag: approved]
+| ⚙️ Stage 5: dag_promote_model      | (MLOps) → @staging + tag candidate
+|                                    |         → Alerta Blue Team
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| ⚙️ Step 8: dag_deploy_prod         | (MLOps) -> Verifica firma Blue Team
-|                                    |         -> [Alias: @production]
-|                                    |         -> [Alerta Red Team]
+| 🛡️ Stage 6: Validación de Staging  | (Blue Team)
+|   FastAPI :5082 — /predict/http    | → POST /model/approve → tag approved
 +------------------------------------+
       │
       ▼
 +------------------------------------+
-| 🚀 Producción: model_serving API   | (WAF / Tráfico Real)
+| ⚙️ Stage 7: dag_deploy_prod        | (MLOps) → valida approved
+|                                    |         → @production + Alerta Red Team
 +------------------------------------+
+      │
+      ▼
++------------------------------------+
+| 🚀 Stage 8: model_serving API      | FastAPI :5082 (modelo @production)
++------------------------------------+
+      │
+          ┌──────────────────────────┴──────────────────────────┐
+          ▼                                                      ▼
++---------------------------+              +-----------------------------------+
+| Stage 9 — MONITOREO       |              | Stage 10 — RED TEAM (Macro-GAN)   |
+| Blue Team: Evidently AI   |              | PayloadHunter → Latent Space      |
+| Data Drift Report         |              | AttackSimulator → Bypass testing  |
++---------------------------+              +-----------------------------------+
+          │                                                  │
+          └────────────────────────┬─────────────────────────┘
+                                   ▼
+                         ┌─────────────────────┐
+                         │  FEEDBACK LOOP      │
+                         │  MLOps → re-training│
+                         └─────────────────────┘
 ```
 
 ---
 
-## Ciclo de Vida (8 Steps)
+## Ciclo de vida (Stages 0–10)
 
-| Step | Componente | Responsabilidad |
-|------|------------|-----------------|
-| 1 | `dag_curate_dataset` | Ingeniería de Datos (Ingesta) |
-| 2 | `csic2010_eda.ipynb` | Data Science (Exploración) |
-| 3 | `dag_preprocess` | MLOps (Vectorización) |
-| 4 | `experiments.ipynb` | Data Science (Prototipado) |
-| 5 | `dag_train` | MLOps (Entrenamiento Automatizado) |
-| 6 | `dag_promote_model` | MLOps (Asignación de @staging) |
-| 7 | Pruebas DAST a la API | Blue Team (Aprobación y Firma) |
-| 8 | `dag_deploy_prod` | MLOps (Pase a @production) |
+| Stage | Componente | Página |
+|-------|------------|--------|
+| 0 | `dag_curate_dataset` | [Stage 0](stage_0_curation.md) |
+| 1 | `csic2010_eda.ipynb` | [Stage 1](stage_1_eda.md) |
+| 2 | `dag_preprocess` | [Stage 2](stage_2_preprocess.md) |
+| 3 | `model_csic_experiments.ipynb` | [Stage 3](stage_3_experiments.md) |
+| 4 | `dag_train` | [Stage 4](stage_4_train.md) |
+| 5 | `dag_promote_model` | [Stage 5](stage_5_promote.md) |
+| 6 | FastAPI + Blue Team | [Stage 6](stage_6_blue_team_audit.md) |
+| 7 | `dag_deploy_prod` | [Stage 7](stage_7_deploy.md) |
+| 8 | `model_serving.py` | [Stage 8](stage_8_api_serving.md) |
+| 9 | `dag_stage9_monitoring.py` | [Stage 9](stage_9_monitoreo.md) |
+| 10 | `red_team_crew.py` | [Stage 10](stage_10_red_team.md) |
+
+Índice: [Flujo completo](flujo_completo.md) · Guías: [Blue Team](blue_team.md) · [Red Team](red_team.md)
+
+---
+
+## Gobernanza MLflow
+
+```text
+dag_train           → 4 runs (LR, RF, XGBoost, LightGBM)
+dag_promote_model   → alias @staging + tag candidate
+Blue Team           → POST /model/approve → tag approved
+dag_deploy_prod     → alias @production
+```
+
+Criterio de selección en Step 6: recall ≥ 0.95 → mayor precision (run canónico v5: **XGBoost**).
 
 ---
 
 ## Arquitectura de servicios
 
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Docker Compose (docker/)                               │
+│  PostgreSQL :5432  ←  MLflow :5081  ←  Airflow :5080   │
+└─────────────────────────────────────────────────────────┘
+                              │
+                    MLflow Model Registry
+                              │
+                    ┌─────────▼─────────┐
+                    │  FastAPI :5082    │  ← fuera de Docker (host local)
+                    │  model_serving    │
+                    └───────────────────┘
 ```
-MLflow :5081   ← Experiment tracking + Model Registry
-Airflow :5080  ← Orquestación + scheduling
-FastAPI :5082  ← API de inferencia
-Postgres :5432 ← Metastore compartido
-```
+
+| Servicio | Puerto | Dónde corre | Rol |
+|----------|--------|-------------|-----|
+| PostgreSQL | 5432 | Docker | Metastore Airflow + MLflow |
+| MLflow | 5081 | Docker | Tracking + Registry + artefactos |
+| Airflow | 5080 | Docker | Orquestación de DAGs |
+| FastAPI | 5082 | **Host local** | Inferencia + aprobación Blue Team |
+
+Detalle en [Stack Tecnológico](stack.md) y [Docker README](../docker/README.md).
 
 ---
 
-## Roles y Responsabilidades
+## Roles y responsabilidades
 
-| Equipo | Misión Principal | Actividad en el Pipeline |
+| Equipo | Misión principal | Actividad en el pipeline |
 |--------|------------------|--------------------------|
-| **Data Science** | Crear la matemática. | Steps 2 y 4 (Notebooks). Calibrar el modelo. |
-| **MLOps** | Automatizar la tubería. | Steps 1, 3, 5, 6 y 8 (DAGs). Mantener Infra. |
-| **Blue Team** | Defensa y Auditoría. | Step 7. Atacar la API en Staging y aprobar (`/model/approve`). |
-| **Red Team** | Ataque en vivo. | Atacar el modelo en Producción para buscar Falsos Negativos (Evasión). |
+| **Data Science** | Diseñar features y evaluar algoritmos | Stages 1 y 3 (notebooks). Calibrar threshold. |
+| **MLOps** | Automatizar la tubería e infra | Stages 0, 2, 4, 5 y 7 (DAGs). Docker Compose. |
+| **Blue Team** | Defensa y auditoría | Stage 6: DAST contra API en staging. Stage 9: monitoreo. |
+| **Red Team** | Simulación de adversarios | Stage 10: payloads frescos contra API. Reportes FN. |

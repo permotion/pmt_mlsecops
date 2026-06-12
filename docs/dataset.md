@@ -2,85 +2,102 @@
 
 ---
 
-## Descripción
+## Descripción General
 
-El dataset CSIC 2010 fue desarrollado en el **Instituto de Seguridad de la Información** del CSIC (Consejo Superior de Investigaciones Científicas de España). Contiene miles de peticiones web generadas automáticamente dirigidas a una aplicación web de e-commerce.
+El dataset **CSIC 2010** fue desarrollado en el **Instituto de Seguridad de la Información — CSIC** (España). Contiene miles de peticiones HTTP generadas automáticamente, dirigidas a una aplicación web de e-commerce, con el objetivo de servir como benchmark académico para la detección de anomalías y ataques web.
 
-| Característica | Valor |
-|----------------|-------|
-| **Origen** | Instituto de Seguridad de la Información — CSIC, España |
-| **Año** | 2010 |
-| **Peticiones normales** | ~36,000 |
-| **Peticiones anómalas** | ~25,000 |
-| **Total** | ~61,065 requests |
-| **Attack rate** | ~41% |
+En este proyecto utilizamos un formato tabular pre-procesado del dataset, obtenido a través de Kaggle.
+
+| Característica | Detalle |
+|----------------|---------|
+| **Origen** | Instituto de Seguridad de la Información — CSIC |
+| **Fuente actual** | [Kaggle CSIC 2010 (formato CSV)](https://www.kaggle.com) |
+| **Año original** | 2010 |
+| **Peticiones normales** | 36,000 (~59%) |
+| **Peticiones anómalas** | 25,065 (~41%) |
+| **Total** | 61,065 requests |
 
 ### ¿Por qué un dataset balanceado?
 
-Elegimos este dataset porque tiene ~41% de ataques, a diferencia de producción real que tiene ~1%. Ventajas de esta característica:
+El ratio de este dataset (59:41) no representa un entorno de producción real, donde el tráfico malicioso suele ser menor al 1% (99:1). Sin embargo, este balance artificial tiene ventajas operativas iniciales:
 
-| Ventaja | Descripción |
+- **Training estable**: El modelo recibe ejemplos abundantes de ambas clases, lo que facilita el aprendizaje de las clases minoritarias sin depender inicialmente de técnicas de remuestreo sintético (SMOTE).
+- **Baseline confiable**: Permite establecer métricas base claras antes de someter al modelo al rigor del desbalance de producción.
+
+*(Nota: Dado que el modelo se enfrentará a tráfico desbalanceado en producción, el proyecto aplica calibración de threshold en etapas posteriores para mantener un falso positivo (FP rate) tolerable. Ver [Threshold Calibration](conceptos_threshold.md)).*
+
+---
+
+## Estructura de archivos y flujo de datos
+
+A diferencia de un experimento en Jupyter Notebook, en PMT MLSecOps el dataset atraviesa un flujo MLOps de tres etapas:
+
+```text
+data/
+├── raw/csic2010/                ← Datos originales
+│   ├── csic_database.csv        ← CSV crudo (17 columnas)
+│   ├── README.md                ← Documentación original
+│   └── CHECKSUMS.sha256         ← Integridad
+│
+├── curated/csic2010/            ← Datos tras Stage 0 (Curado)
+│   ├── curation_report.md       ← Reporte de escaneo PII y deduplicación
+│   └── stage1_report.json
+│
+└── processed/csic2010/          ← Datos tras Stage 2 (Preprocess)
+    └── features_v5.parquet      ← Dataset final con 27 features extraídas
+```
+
+### División del dataset (Splitting)
+Aunque el CSIC 2010 original se distribuye en tres bloques (train normal, test normal, test anómalo), **este proyecto consolida todas las filas en un único CSV** y delega la división al pipeline automatizado. En el script `train_model_a.py`, el dataset se divide dinámicamente usando una partición estratificada **70/15/15** (Train/Validation/Test).
+
+---
+
+## Estructura Raw: Columnas del CSV
+
+El archivo de entrada `csic_database.csv` consta de 17 columnas que representan componentes parseados de las peticiones HTTP.
+
+| Columna | Descripción |
 |---------|-------------|
-| **Training estable** | El modelo recibe suficientes ejemplos de ambas clases, evitando bias hacia la clase mayoritaria |
-| **Métricas de training significativas** | Recall y Precision son representativos durante el entrenamiento |
-| **Convergencia más rápida** | LightGBM converge más rápido con datos balanceados |
-| **Baseline confiable** | Permite establecer métricas base antes de ajustar para producción desbalanceada |
-
-**Nota:** En producción el ratio es ~99:1 (normal:ataque), por eso recalibramos el threshold y monitoreamos FP rate con el Red Team Agent.
-
-### División del dataset
-
-El dataset está dividido en tres bloques:
-- **Conjunto de entrenamiento normal** — peticiones legítimas para training
-- **Conjunto de prueba normal** — peticiones legítimas para evaluación
-- **Conjunto de prueba anómalo** — peticiones de ataque para evaluación
+| `Unnamed: 0` | Texto "Normal"/"Anomalous" (redundante, se descarta) |
+| `Method` | Método HTTP (ej: GET, POST, PUT). *Nota EDA: el 100% de los PUT son ataques.* |
+| `URL` | Request line con path y query string. |
+| `content` | Body del request (vacío en métodos GET). |
+| `classification` | Variable objetivo (0 = normal, 1 = ataque). Renombrada a `label` en el pipeline. |
+| `cookie`, `host`, `Accept`... | Headers HTTP estándar parseados. |
+| `lenght` | Content-Length *(Nota: typo "lenght" heredado del dataset original).* |
 
 ---
 
 ## Tipos de ataques cubiertos
 
-El dataset incluye los siguientes tipos de ataque:
+Según la documentación original, el dataset inyecta anomalías que simulan ataques como:
+- **Information Gathering**
+- **Files Disclosure**
+- **Cross-Site Scripting (XSS)**
+- **SQL Injection (SQLi)**
+- **CRLF Injection**
+- **Cross-Site Request Forgery (CSRF)**
+- **Parameter Tampering**
 
-| Categoría | Descripción |
-|-----------|-------------|
-| **SQL Injection** | Inyección de código SQL en parámetros |
-| **XSS** | Cross-Site Scripting |
-| **Buffer Overflow** | Desbordamiento de buffer |
-| **CRLF Injection** | Inyección de caracteres CRLF en headers |
-| **Parameter Tampering** | Manipulación de parámetros de request |
-| **Path Traversal** | Acceso a archivos del sistema |
-| **Command Injection** | Ejecución de comandos |
+*(Nota: En este contexto, ataques como Path Traversal a menudo se clasifican dentro de "Files Disclosure").*
 
 ---
 
-## Estructura del dataset
+## Privacidad y PII (Curación)
 
-```
-data/raw/csic2010/
-├── csic_database.csv
-├── README.md
-└── SHA256.txt
-```
+Un hallazgo importante de la fase de curación (`dag_curate_dataset`) es la presencia de identificadores sensibles o de sesión en los datos brutos. 
+- **JSESSIONID**: Presente en el 100% de las filas de la columna `cookie`.
+- El reporte de curación detalla el tratamiento de PII (Personaly Identifiable Information) para garantizar un pipeline limpio.
 
-### Columnas del CSV
-
-| Columna | Descripción |
-|---------|-------------|
-| `request` | HTTP request completo como string |
-| `method` | GET o POST |
-| `url` | URL del request |
-| `label` | 0=normal, 1=ataque |
+*(Ver más detalles en: [Stage 0 — Curado del Dataset](stage_0_curation.md))*
 
 ---
 
 ## Limitaciones conocidas
 
-El dataset CSIC 2010 es ampliamente usado pero también tiene limitaciones:
+El dataset CSIC 2010 es un benchmark robusto, pero presenta desafíos técnicos actuales:
 
-| Limitación | Impacto |
-|------------|---------|
-| **Falta de variedad** | Es criticado por su falta de variedad, lo que lleva a muchos investigadores a crear o combinar datasets para mayor confiabilidad |
-| **No representa ataques modernos** | No representa adecuadamente los vectores de ataque más nuevos orientados a tecnologías web actuales (API-specific attacks, HTTP desync) |
-| **Dataset de 2010** | Las técnicas de ataque han evolucionado desde entonces |
-
-**Mitigación:** El Red Team Agent busca payloads frescos de fuentes públicas (Exploit-DB, CVE feeds) para detectar gaps del modelo frente a ataques actuales.
+| Limitación | Impacto | Mitigación en este proyecto |
+|------------|---------|-----------------------------|
+| **Antigüedad (2010)** | Faltan técnicas modernas orientadas a APIs (JSON body manipulation), GraphQL o HTTP desync. | **Red Team Agent:** Usa `CrewAI` para consultar repositorios modernos en GitHub (como *PayloadsAllTheThings*) y auditar la API con ataques del día a día. |
+| **Morfología limitada** | Criticas por baja variedad en los paths y estructura frente a una red empresarial real. | **Feedback Loop:** Si la tasa de detección del Red Team cae por debajo del 85%, el sistema dispara una alerta de retrain. |

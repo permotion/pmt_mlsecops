@@ -18,7 +18,7 @@ Los servidores web reciben miles de requests por minuto. Revisar manualmente cad
 La detección automática permite:
 - **Escalar** a volúmenes de tráfico industrial
 - **Reaccionar rápido** a nuevas técnicas de ataque
-- **Reducer falsos negativos** — en seguridad, no detectar un ataque es más costoso que investigar un falso positivo
+- **Reducir falsos negativos** — en seguridad, no detectar un ataque es más costoso que investigar un falso positivo
 
 ---
 
@@ -27,7 +27,7 @@ La detección automática permite:
 Un modelo puesto en producción sin proceso de ciclo de vida va a:
 
 1. **Degradar silenciosamente** — los ataques evolucionan, el modelo no
-2. **Generar más FP** — condiciones de producción (tráfico 99:1 normal:ataque) son distintas al training (41:59)
+2. **Generar más FP** — condiciones de producción (tráfico 99:1 normal:ataque) son distintas al training (59:41)
 3. **No generar feedback** — nadie sabe si el modelo está fallando hasta que hay un incidente
 
 ```
@@ -40,11 +40,11 @@ El problema no es entrenar un modelo. El problema es **operarlo** sin proceso.
 
 ## ¿Por qué CSIC 2010?
 
-El dataset CSIC 2010 (HTTP dataset) fue publicado por la Universidad de Granada y es ampliamente utilizado en investigación académica de detección de ataques web.
+El dataset CSIC 2010 (HTTP dataset) fue publicado por el Instituto de Seguridad de la Información — CSIC y es ampliamente utilizado en investigación académica de detección de ataques web.
 
 | Característica | Detalle |
 |----------------|---------|
-| **Origen** | Universidad de Granada — Datacenter CSIC |
+| **Origen** | Instituto de Seguridad de la Información — CSIC |
 | **Contenido** | Requests HTTP reales capturados de una aplicación web |
 | **Etiquetas** | Cada request marcado como normal o ataque (SQLi, XSS, etc.) |
 | **Tamaño** | 61,065 requests |
@@ -74,3 +74,9 @@ Nuestro enfoque combina **ML para detección** con **MLOps para gobernanza** —
 | **Producción típica** | ~99:1 | FP rate sube significativamente vs. test |
 
 Este desbalance es la razón por la cual el **threshold calibration** es crítico — un threshold de 0.50 (default) genera muchos FP en producción.
+
+---
+
+## El rol de PMT MLSecOps
+
+PMT MLSecOps responde a estos desafíos con un pipeline automatizado (Airflow), registro y promoción controlada de modelos (MLflow), validación humana para evitar degradaciones silenciosas (Blue Team) y pruebas continuas de evasión (Red Team con CrewAI).

@@ -1,6 +1,6 @@
 # Dataset Curation Report — CSIC 2010
 
-**Fecha:** 2026-05-27 12:22:27
+**Fecha:** 2026-06-08 12:16:24
 **Dataset:** `/opt/airflow/data/raw/csic2010/csic_database.csv`
 **Total de filas:** 61,065
 
