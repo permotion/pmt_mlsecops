@@ -126,7 +126,7 @@ curl -s -X POST http://localhost:5082/predict/http \
   }'
 ```
 
-Más ejemplos: [API README](../src/mlsec/api/README.md)
+Más ejemplos: [API README](https://github.com/permotion/PMT_MLSecOps/tree/main/src/mlsec/api/README.md)
 
 ---
 

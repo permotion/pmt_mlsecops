@@ -64,7 +64,7 @@ Respuesta: `prediction` (0/1), `probability`, `threshold`, `latency_ms`.
 
 ## Documentación de API
 
-Referencia completa de endpoints: **[src/mlsec/api/README.md](../src/mlsec/api/README.md)**.
+Referencia completa de endpoints: **[src/mlsec/api/README.md](https://github.com/permotion/PMT_MLSecOps/tree/main/src/mlsec/api/README.md)**.
 
 ---
 

@@ -59,7 +59,7 @@ Analizar el dataset CSIC 2010 **antes de escribir código de producción**: ente
 
 ## Resultados documentados
 
-Detalle completo en [Resultados Stage 2 — EDA](results/stage_2_results.md#stage-2--eda-notbookscsic2010_edaipynb).
+Detalle completo en [Resultados Stage 2 — EDA](results/stage_2_results.md).
 
 ---
 

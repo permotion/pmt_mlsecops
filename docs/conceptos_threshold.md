@@ -143,7 +143,7 @@ Causa principal: features binarias (`url_has_pct27`, etc.) no distinguen bien en
 
 **Implicancia para threshold:** subir precision vía threshold alto baja recall por debajo de 0.95 — no es viable sin nuevas features o enfoque distinto.
 
-Detalle: [Resultados Stage 3 — techo de precision](results/stage_3_results.md#conclusión-el-techo-de-precision-079)
+Detalle: [Resultados Stage 3 — techo de precision](results/stage_3_results.md)
 
 ---
 

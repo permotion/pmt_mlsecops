@@ -142,7 +142,7 @@ Criterio de selección en Step 6: recall ≥ 0.95 → mayor precision (run canó
 | Airflow | 5080 | Docker | Orquestación de DAGs |
 | FastAPI | 5082 | **Host local** | Inferencia + aprobación Blue Team |
 
-Detalle en [Stack Tecnológico](stack.md) y [Docker README](../docker/README.md).
+Detalle en [Stack Tecnológico](stack.md) y [Docker README](https://github.com/permotion/PMT_MLSecOps/tree/main/docker/README.md).
 
 ---
 
